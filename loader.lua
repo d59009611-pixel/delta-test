@@ -34,7 +34,41 @@ local Lighting = game:GetService("Lighting")
 local CONFIG = {
     SCRIPT_NAME = "BloxFruitsHub",
     VERSION = "3.2.1",
-    WEB_URL = "https://raw.githubusercontent.com/YOUR_USERNAME/blox-fruits-hub/main/index.html",
+  
+    ============================================================================
+]]
+
+-- ===========================================================================
+-- CORE SERVICES
+-- ===========================================================================
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Debris = game:GetService("Debris")
+local UserSettings = game:GetService("UserSettings")
+local Lighting = game:GetService("Lighting")
+
+-- ===========================================================================
+-- CONFIGURATION
+-- ===========================================================================
+
+local CONFIG = {
+    SCRIPT_NAME = "BloxFruitsHub",
+    VERSION = "3.2.1",
+    WEB_URL = "https://raw.githubusercontent.com/d59009611-pixel/delta-test/refs/heads/main/index.html",
+    GUI_NAME = "BloxFruitsHub_Gui",
+    ESP_GUI_NAME = "BloxFruitsHub_ESP",
+    COMMAND_POLL_INTERVAL = 0.1,
+    MAX_COMMAND_RETRIES = 3
+}
+
+-- ===========================================================================
+-- PLAYER & CHARACTER SETUP
+-- ===========================================================================
+
     GUI_NAME = "BloxFruitsHub_Gui",
     ESP_GUI_NAME = "BloxFruitsHub_ESP",
     COMMAND_POLL_INTERVAL = 0.1,
