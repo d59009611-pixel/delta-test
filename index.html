@@ -1,1 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Blox Fruits Premium Hub | Delta Executor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-screen">
+        <div class="loader-container">
+            <div class="loader-ring"></div>
+            <div class="loader-ring loader-ring-2"></div>
+            <div class="loader-ring loader-ring-3"></div>
+            <div class="loader-text">
+                <span class="loader-title">BLOX FRUITS</span>
+                <span class="loader-subtitle">PREMIUM HUB</span>
+            </div>
+        </div>
+        <div class="loading-status">
+            <span class="status-dot"></span>
+            <span class="status-text">Initializing Delta Executor...</span>
+        </div>
+    </div>
 
+    <!-- Main Application Container -->
+    <div id="appContainer" class="app-container hidden">
+        <!-- Floating Toggle Button -->
+        <button id="toggleButton" class="toggle-button hidden" aria-label="Toggle Menu">
+            <div class="toggle-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M8 12h8M12 8v8"/>
+                </svg>
+            </div>
+            <div class="toggle-glow"></div>
+        </button>
+
+        <!-- Main Frame -->
+        <div id="mainFrame" class="main-frame">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <div class="logo-container">
+                        <div class="logo-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                            </svg>
+                        </div>
+                        <div class="logo-text">
+                            <h1 class="logo-title">BLOX FRUITS</h1>
+                            <span class="logo-subtitle">PREMIUM HUB</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <div class="status-indicator">
+                        <span class="status-dot active"></span>
+                        <span class="status-text">CONNECTED</span>
+                    </div>
+                    <button id="closeButton" class="close-button" aria-label="Minimize">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Sidebar Navigation -->
+            <nav class="sidebar">
+                <div class="sidebar-tabs">
+                    <button class="sidebar-tab active" data-tab="mainFarm" aria-label="Main Farm">
+                        <div class="tab-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M12 6v6l4 2"/>
+                            </svg>
+                        </div>
+                        <span class="tab-label">Main Farm</span>
+                    </button>
+                    <button class="sidebar-tab" data-tab="stats" aria-label="Stats Allocation">
+                        <div class="tab-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 20V10M12 20V4M6 20v-6"/>
+                            </svg>
+                        </div>
+                        <span class="tab-label">Stats</span>
+                    </button>
+                    <button class="sidebar-tab" data-tab="teleports" aria-label="Teleport World">
+                        <div class="tab-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 2L2 22h20L12 2zm0 4l6 13H6l6-13z"/>
+                            </svg>
+                        </div>
+                        <span class="tab-label">Teleports</span>
+                    </button>
+                    <button class="sidebar-tab" data-tab="esp" aria-label="Premium ESP">
+                        <div class="tab-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                        </div>
+                        <span class="tab-label">ESP World</span>
+                    </button>
+                    <button class="sidebar-tab" data-tab="shop" aria-label="Shop & Items">
+                        <div class="tab-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+                                <path d="M3 6h18M16 10a4 4 0 01-8 0"/>
+                            </svg>
+                        </div>
+                        <span class="tab-label">Shop</span>
+                    </button>
+                </div>
+            </nav>
+
+            <!-- Main Content Area -->
+            <main class="main-content">
+                <!-- Main Farm Tab -->
+                <div class="tab-content active" data-tab="mainFarm">
+                    <div class="tab-header">
+                        <h2 class="tab-title">🎯 Main Farm</h2>
+                        <span class="tab-badge premium">PREMIUM</span>
+                    </div>
+                    
+                    <div class="feature-section">
+                        <div class="feature-card">
+                            <div class="feature-header">
+                                <div class="feature-info">
+                                    <h3 class="feature-name">Auto Farm Level</h3>
+                                    <p class="feature-desc">Automatically accepts quests, teleports to mobs, and farms XP</p>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="autoFarm" data-feature="autoFarm">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="feature-options">
+                                <div class="option-row">
+                                    <span class="option-label">Smooth Teleport</span>
+                                    <label class="toggle-switch small">
+                                        <input type="checkbox" id="smoothTeleport" data-feature="smoothTeleport" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="option-row">
+                                    <span class="option-label">Auto Clicker</span>
+                                    <label class="toggle-switch small">
+                                        <input type="checkbox" id="autoClicker" data-feature="autoClicker" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="option-row">
+                                    <span class="option-label">Auto Quest</span>
+                                    <label class="toggle-switch small">
+                                        <input type="checkbox" id="autoQuest" data-feature="autoQuest" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="feature-card">
+                            <div class="feature-header">
+                                <div class="feature-info">
+                                    <h3 class="feature-name">Auto Mastery</h3>
+                                    <p class="feature-desc">Farm mastery by low-healthing enemies and finishing with skills</p>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="autoMastery" data-feature="autoMastery">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="feature-options">
+                                <div class="mastery-selector">
+                                    <button class="mastery-btn active" data-type="fruit">🍎 Fruit</button>
+                                    <button class="mastery-btn" data-type="sword">⚔️ Sword</button>
+                                    <button class="mastery-btn" data-type="gun">🔫 Gun</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats Tab -->
+                <div class="tab-content" data-tab="stats">
+                    <div class="tab-header">
+                        <h2 class="tab-title">📊 Stats Allocation</h2>
+                        <span class="tab-badge">AUTO</span>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon melee">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14.5 10.5L8 17l-4-4 6.5-6.5L14.5 10.5z"/>
+                                </svg>
+                            </div>
+                            <h3 class="stat-name">Melee</h3>
+                            <p class="stat-value" id="meleeValue">0</p>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="autoMelee" data-feature="autoMelee">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon defense">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                </svg>
+                            </div>
+                            <h3 class="stat-name">Defense</h3>
+                            <p class="stat-value" id="defenseValue">0</p>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="autoDefense" data-feature="autoDefense">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon sword">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14.5 13.5L11 21l-4-5H2l9-10 3.5 8.5zM22 3l-3 9h-4l5-12-3 9H4l7 12 3.5-8.5L22 3z"/>
+                                </svg>
+                            </div>
+                            <h3 class="stat-name">Sword</h3>
+                            <p class="stat-value" id="swordValue">0</p>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="autoSword" data-feature="autoSword">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon gun">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 13h3l2-9h11l2 9h3v8H3v-8z"/>
+                                </svg>
+                            </div>
+                            <h3 class="stat-name">Gun</h3>
+                            <p class="stat-value" id="gunValue">0</p>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="autoGun" data-feature="autoGun">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon df">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/>
+                                    <path d="M12 6v6l4 2"/>
+                                </svg>
+                            </div>
+                            <h3 class="stat-name">Devil Fruit</h3>
+                            <p class="stat-value" id="dfValue">0</p>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="autoDF" data-feature="autoDF">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="stat-card points">
+                            <div class="stat-icon points">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2l3 9h9l-7 5 3 9-8-6-8 6 3-9-7-5h9z"/>
+                                </svg>
+                            </div>
+                            <h3 class="stat-name">Points</h3>
+                            <p class="stat-value" id="pointsValue">0</p>
+                            <span class="stat-status">Available</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Teleports Tab -->
+                <div class="tab-content" data-tab="teleports">
+                    <div class="tab-header">
+                        <h2 class="tab-title">🗺️ Teleport World</h2>
+                        <span class="tab-badge">INSTANT</span>
+                    </div>
+
+                    <div class="feature-section">
+                        <div class="feature-card">
+                            <div class="feature-header">
+                                <div class="feature-info">
+                                    <h3 class="feature-name">Sea Selection</h3>
+                                    <p class="feature-desc">Instantly teleport between Sea 1, Sea 2, and Sea 3</p>
+                                </div>
+                            </div>
+                            <div class="sea-selector">
+                                <button class="sea-btn active" data-sea="1">
+                                    <div class="sea-icon">🌊</div>
+                                    <span class="sea-name">Sea 1</span>
+                                </button>
+                                <button class="sea-btn" data-sea="2">
+                                    <div class="sea-icon">🌊</div>
+                                    <span class="sea-name">Sea 2</span>
+                                </button>
+                                <button class="sea-btn" data-sea="3">
+                                    <div class="sea-icon">🌊</div>
+                                    <span class="sea-name">Sea 3</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="feature-card">
+                            <div class="feature-header">
+                                <div class="feature-info">
+                                    <h3 class="feature-name">Island Teleport</h3>
+                                    <p class="feature-desc">Select and teleport to any island on the current map</p>
+                                </div>
+                            </div>
+                            <div class="island-dropdown">
+                                <select id="islandSelect" class="custom-select">
+                                    <optgroup label="Sea 1 Islands">
+                                        <option value="prelude">Prelude Island</option>
+                                        <option value="jail">Jail</option>
+                                        <option value="mysterious">Mysterious Island</option>
+                                        <option value="snow">Snow Mountain</option>
+                                        <option value="desert">Desert</option>
+                                        <option value="castle">Castle on the Sea</option>
+                                        <option value="forest">Forest</option>
+                                        <option value="skylands">Skylands</option>
+                                        <option value="haka">Haka Island</option>
+                                    </optgroup>
+                                    <optgroup label="Sea 2 Islands">
+                                        <option value="risky">Risky Island</option>
+                                        <option value="fried">Fried Island</option>
+                                        <option value="alpine">Alpine Village</option>
+                                        <option value="candy">Candy Island</option>
+                                        <option value="pink">Pink Island</option>
+                                        <option value="radiation">Radiation Zone</option>
+                                        <option value="volcano">Volcano</option>
+                                        <option value="kingscastle">King's Castle</option>
+                                        <option value="corrupted">Corrupted Ship</option>
+                                    </optgroup>
+                                    <optgroup label="Sea 3 Islands">
+                                        <option value="greenzone">Green Zone</option>
+                                        <option value="hunting">Hunting Ground</option>
+                                        <option value="redzone">Red Zone</option>
+                                        <option value="magma">Magma Vessel</option>
+                                        <option value="hokage">Hokage Island</option>
+                                        <option value="shadow">Shadow Amethyst</option>
+                                        <option value="snowvillage">Snow Village</option>
+                                        <option value="rainbow">Rainbow Castle</option>
+                                        <option value="flaming">Flaming Castle</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+                            <button class="teleport-btn" id="teleportBtn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2L2 22h20L12 2zm0 4l6 13H6l6-13z"/>
+                                </svg>
+                                <span>Teleport</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ESP World Tab -->
+                <div class="tab-content" data-tab="esp">
+                    <div class="tab-header">
+                        <h2 class="tab-title">👁️ ESP World</h2>
+                        <span class="tab-badge premium">PREMIUM</span>
+                    </div>
+
+                    <div class="feature-section">
+                        <div class="feature-card">
+                            <div class="feature-header">
+                                <div class="feature-info">
+                                    <h3 class="feature-name">Player ESP</h3>
+                                    <p class="feature-desc">Display usernames, distance, health bars, and avatar thumbnails</p>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="playerEsp" data-feature="playerEsp">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="feature-options">
+                                <div class="option-row">
+                                    <span class="option-label">Name Tags</span>
+                                    <label class="toggle-switch small">
+                                        <input type="checkbox" id="nameTags" data-feature="nameTags" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="option-row">
+                                    <span class="option-label">Distance</span>
+                                    <label class="toggle-switch small">
+                                        <input type="checkbox" id="distanceEsp" data-feature="distanceEsp" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="option-row">
+                                    <span class="option-label">Health Bar</span>
+                                    <label class="toggle-switch small">
+                                        <input type="checkbox" id="healthBar" data-feature="healthBar" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="option-row">
+                                    <span class="option-label">Avatar Thumbnail</span>
+                                    <label class="toggle-switch small">
+                                        <input type="checkbox" id="avatarThumb" data-feature="avatarThumb">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="option-row">
+                                    <span class="option-label">Fruit Display</span>
+                                    <label class="toggle-switch small">
+                                        <input type="checkbox" id="fruitEsp" data-feature="fruitEsp">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="feature-card">
+                            <div class="feature-header">
+                                <div class="feature-info">
+                                    <h3 class="feature-name">Legendary Sword Dealer ESP</h3>
+                                    <p class="feature-desc">Detect sword dealer spawn with screen alert and tracer line</p>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="swordDealerEsp" data-feature="swordDealerEsp">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="feature-options">
+                                <div class="option-row">
+                                    <span class="option-label">Screen Alert</span>
+                                    <label class="toggle-switch small">
+                                        <input type="checkbox" id="dealerAlert" data-feature="dealerAlert" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="option-row">
+                                    <span class="option-label">Tracer Line</span>
+                                    <label class="toggle-switch small">
+                                        <input type="checkbox" id="dealerTracer" data-feature="dealerTracer" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="feature-card">
+                            <div class="feature-header">
+                                <div class="feature-info">
+                                    <h3 class="feature-name">Devil Fruit ESP</h3>
+                                    <p class="feature-desc">Track spawned fruits with 3D boxes, names, and image icons</p>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="fruitEspToggle" data-feature="fruitEspToggle">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="feature-options">
+                                <div class="option-row">
+                                    <span class="option-label">3D Box</span>
+                                    <label class="toggle-switch small">
+                                        <input type="checkbox" id="fruitBox" data-feature="fruitBox" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="option-row">
+                                    <span class="option-label">Fruit Name</span>
+                                    <label class="toggle-switch small">
+                                        <input type="checkbox" id="fruitName" data-feature="fruitName" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="option-row">
+                                    <span class="option-label">Image Icon</span>
+                                    <label class="toggle-switch small">
+                                        <input type="checkbox" id="fruitIcon" data-feature="fruitIcon">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="feature-card">
+                            <div class="feature-header">
+                                <div class="feature-info">
+                                    <h3 class="feature-name">Berry & Haki ESP</h3>
+                                    <p class="feature-desc">Separate toggle for rare materials, chests, and Haki berries</p>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="hakiEsp" data-feature="hakiEsp">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="feature-options">
+                                <div class="option-row">
+                                    <span class="option-label">Berry Detection</span>
+                                    <label class="toggle-switch small">
+                                        <input type="checkbox" id="berryEsp" data-feature="berryEsp" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="option-row">
+                                    <span class="option-label">Chest Detection</span>
+                                    <label class="toggle-switch small">
+                                        <input type="checkbox" id="chestEsp" data-feature="chestEsp" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Shop Tab -->
+                <div class="tab-content" data-tab="shop">
+                    <div class="tab-header">
+                        <h2 class="tab-title">🛒 Shop & Items</h2>
+                        <span class="tab-badge premium">PREMIUM</span>
+                    </div>
+
+                    <div class="feature-section">
+                        <div class="feature-card">
+                            <div class="feature-header">
+                                <div class="feature-info">
+                                    <h3 class="feature-name">Auto Buy</h3>
+                                    <p class="feature-desc">Automatically purchase swords, fighting styles, and items</p>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="autoBuy" data-feature="autoBuy">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="feature-options">
+                                <div class="option-row">
+                                    <span class="option-label">Auto Swords</span>
+                                    <label class="toggle-switch small">
+                                        <input type="checkbox" id="autoSwords" data-feature="autoSwords">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="option-row">
+                                    <span class="option-label">Superhuman Style</span>
+                                    <label class="toggle-switch small">
+                                        <input type="checkbox" id="autoSuperhuman" data-feature="autoSuperhuman">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="option-row">
+                                    <span class="option-label">Death Step Style</span>
+                                    <label class="toggle-switch small">
+                                        <input type="checkbox" id="autoDeathStep" data-feature="autoDeathStep">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="option-row">
+                                    <span class="option-label">Water Kung Fu</span>
+                                    <label class="toggle-switch small">
+                                        <input type="checkbox" id="autoWaterKungFu" data-feature="autoWaterKungFu">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="feature-card">
+                            <div class="feature-header">
+                                <div class="feature-info">
+                                    <h3 class="feature-name">Fruit Sniper</h3>
+                                    <p class="feature-desc">Instantly buy target fruits the millisecond they appear</p>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="fruitSniper" data-feature="fruitSniper">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="feature-options">
+                                <div class="option-row">
+                                    <span class="option-label">Auto Rebuy</span>
+                                    <label class="toggle-switch small">
+                                        <input type="checkbox" id="autoRebuy" data-feature="autoRebuy" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="fruit-selector">
+                                <select id="targetFruit" class="custom-select">
+                                    <option value="">Select Target Fruit...</option>
+                                    <optgroup label="Mythical">
+                                        <option value="buddha">Buddha</option>
+                                        <option value="leopard">Leopard</option>
+                                        <option value="spirit">Spirit</option>
+                                        <option value="portal">Portal</option>
+                                        <option value="shadow">Shadow</option>
+                                        <option value="control">Control</option>
+                                        <option value="light">Light</option>
+                                        <option value="dough">Dough</option>
+                                    </optgroup>
+                                    <optgroup label="Legendary">
+                                        <option value="magma">Magma</option>
+                                        <option value="blizzard">Blizzard</option>
+                                        <option value="paw">Paw</option>
+                                        <option value="gravity">Gravity</option>
+                                        <option value="quake">Quake</option>
+                                        <option value="dragon">Dragon</option>
+                                    </optgroup>
+                                </select>
+                                <button class="sniper-btn" id="startSniperBtn">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="10"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                    <span>Start Sniper</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Footer -->
+            <footer class="footer">
+                <div class="footer-left">
+                    <span class="version">v3.2.1</span>
+                    <span class="executor">Delta Executor</span>
+                </div>
+                <div class="footer-right">
+                    <button class="copy-script-btn" id="copyScriptBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/>
+                            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+                        </svg>
+                        <span>Copy Lua Script</span>
+                    </button>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="notification" class="notification hidden">
+        <div class="notification-content">
+            <div class="notification-icon"></div>
+            <div class="notification-text"></div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="app.js"></script>
+</body>
+</html>
