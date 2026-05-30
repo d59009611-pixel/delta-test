@@ -2,9 +2,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local VirtualUser = game:GetService("VirtualUser")
 local CoreGui = game:GetService("CoreGui")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 -- ===========================================================================
 -- CORE VARIABLES
@@ -15,37 +13,39 @@ local Humanoid = Character:WaitForChild("Humanoid")
 local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 local Camera = Workspace.CurrentCamera
 -- Script Configuration
-local SCRIPT_NAME = "BloxFruitsPremium"
-local SCRIPT_VERSION = "3.2.1"
-local GUI_WIDTH = 340
-local GUI_HEIGHT = 480
+local SCRIPT_NAME = "BloxFruitsESP"
+local SCRIPT_VERSION = "1.0.0"
+local GUI_WIDTH = 320
+local GUI_HEIGHT = 500
 -- Color Definitions
 local Colors = {
-    Background = Color3.fromRGB(12, 12, 16),
-    BackgroundLight = Color3.fromRGB(22, 22, 28),
+    Background = Color3.fromRGB(10, 10, 15),
+    BackgroundLight = Color3.fromRGB(20, 20, 26),
     Accent = Color3.fromRGB(139, 92, 246),
     AccentLight = Color3.fromRGB(168, 85, 247),
     Active = Color3.fromRGB(16, 185, 129),
-    Inactive = Color3.fromRGB(80, 80, 85),
-    Warning = Color3.fromRGB(245, 158, 11),
-    Error = Color3.fromRGB(239, 68, 68),
+    Inactive = Color3.fromRGB(60, 60, 65),
+    Enemy = Color3.fromRGB(239, 68, 68),
+    Ally = Color3.fromRGB(34, 197, 94),
     Text = Color3.fromRGB(255, 255, 255),
     TextDim = Color3.fromRGB(150, 150, 160),
     Gold = Color3.fromRGB(255, 215, 0),
-    Green = Color3.fromRGB(34, 197, 94)
+    Purple = Color3.fromRGB(139, 92, 246)
 }
 -- Feature State Table
 local Features = {
-    SpeedBypass = false,
-    AutoFarm = false,
+    PlayerESP = false,
     SwordDealerESP = false,
     FruitESP = false,
-    BerryESP = false
+    BerryESP = false,
+    ChestESP = false
 }
 -- ESP Objects Storage
 local ESPLabels = {}
+local ESPThumbnails = {}
 local SelectionBoxes = {}
 local TracerLines = {}
+local DealerAlert = nil
 -- ===========================================================================
 -- SAFE CALL WRAPPER
 -- ===========================================================================
@@ -69,6 +69,41 @@ end
 local function IsOnScreen(worldPosition)
     local onScreen, screenPosition = Camera:WorldToViewportPoint(worldPosition)
     return onScreen and screenPosition.Z > 0
+end
+local function IsEnemyPlayer(player)
+    -- Check if player is on different team or in PvP
+    local playerTeam = player.Team
+    local localTeam = LocalPlayer.Team
+    
+    if playerTeam and localTeam then
+        if playerTeam ~= localTeam then
+            return true
+        end
+    end
+    
+    -- Check for PvP indicators in character
+    local playerCharacter = player.Character
+    if playerCharacter then
+        local attributes = playerCharacter:FindFirstChild("Attributes")
+        if attributes then
+            local pvpMode = attributes:FindFirstChild("PvP")
+            if pvpMode then
+                return true
+            end
+        end
+    end
+    
+    return false
+end
+local function GetPlayerFruit(player)
+    local fruits = player:FindFirstChild("Fruits")
+    if fruits then
+        local currentFruit = fruits:FindFirstChild("Current")
+        if currentFruit then
+            return currentFruit.Value or "None"
+        end
+    end
+    return "None"
 end
 -- ===========================================================================
 -- UI CREATION FUNCTIONS
@@ -94,7 +129,7 @@ local function CreateMainFrame(screenGui)
     corner.CornerRadius = UDim.new(0, 15)
     corner.Parent = frame
     
-    -- Neon purple border
+    -- Neon purple glowing border
     local stroke = Instance.new("UIStroke")
     stroke.Color = Colors.Accent
     stroke.Transparency = 0.3
@@ -105,9 +140,9 @@ local function CreateMainFrame(screenGui)
 end
 local function CreateHeader(frame)
     local header = Instance.new("Frame")
-    header.Size = UDim2.new(1, 0, 0, 60)
+    header.Size = UDim2.new(1, 0, 0, 65)
     header.Position = UDim2.new(0, 0, 0, 0)
-    header.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+    header.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
     header.BorderSizePixel = 0
     header.Parent = frame
     
@@ -125,33 +160,33 @@ local function CreateHeader(frame)
     
     -- Title
     local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, -50, 1, 0)
-    title.Position = UDim2.new(0, 15, 0, 0)
+    title.Size = UDim2.new(1, -50, 0, 28)
+    title.Position = UDim2.new(0, 15, 0, 8)
     title.BackgroundTransparency = 1
-    title.Text = "🍎 BLOX FRUITS"
-    title.TextColor3 = Colors.Text
-    title.TextSize = 22
+    title.Text = "👁️ ESP WORLD"
+    title.TextColor3 = Colors.AccentLight
+    title.TextSize = 20
     title.Font = Enum.Font.GothamBold
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = header
     
-    -- Version
-    local version = Instance.new("TextLabel")
-    version.Size = UDim2.new(1, -50, 0, 20)
-    version.Position = UDim2.new(0, 15, 0, 30)
-    version.BackgroundTransparency = 1
-    version.Text = "v" .. SCRIPT_VERSION
-    version.TextColor3 = Colors.AccentLight
-    version.TextSize = 12
-    version.Font = Enum.Font.Gotham
-    version.TextXAlignment = Enum.TextXAlignment.Left
-    version.Parent = header
+    -- Subtitle
+    local subtitle = Instance.new("TextLabel")
+    subtitle.Size = UDim2.new(1, -50, 0, 18)
+    subtitle.Position = UDim2.new(0, 15, 0, 32)
+    subtitle.BackgroundTransparency = 1
+    subtitle.Text = "Premium ESP System"
+    subtitle.TextColor3 = Colors.TextDim
+    subtitle.TextSize = 13
+    subtitle.Font = Enum.Font.Gotham
+    subtitle.TextXAlignment = Enum.TextXAlignment.Left
+    subtitle.Parent = header
     
-    -- Close Button
+    -- Close Button (X)
     local closeBtn = Instance.new("TextButton")
     closeBtn.Size = UDim2.new(0, 35, 0, 35)
     closeBtn.Position = UDim2.new(1, -45, 0.5, -17.5)
-    closeBtn.BackgroundColor3 = Colors.Error
+    closeBtn.BackgroundColor3 = Colors.Enemy
     closeBtn.BorderSizePixel = 0
     closeBtn.ZIndex = 100
     closeBtn.Text = "✕"
@@ -166,105 +201,80 @@ local function CreateHeader(frame)
     
     return header, closeBtn
 end
-local function CreateContentArea(frame)
-    local content = Instance.new("ScrollingFrame")
-    content.Size = UDim2.new(1, 0, 1, -60)
-    content.Position = UDim2.new(0, 0, 0, 60)
-    content.BackgroundColor3 = Colors.Background
-    content.BorderSizePixel = 0
-    content.ScrollBarThickness = 4
-    content.CanvasSize = UDim2.new(0, 0, 0, 0)
-    content.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    content.Parent = frame
+local function CreateScrollingFrame(frame)
+    local scrollFrame = Instance.new("ScrollingFrame")
+    scrollFrame.Size = UDim2.new(1, 0, 1, -65)
+    scrollFrame.Position = UDim2.new(0, 0, 0, 65)
+    scrollFrame.BackgroundColor3 = Colors.Background
+    scrollFrame.BorderSizePixel = 0
+    scrollFrame.ScrollBarThickness = 4
+    scrollFrame.ScrollBarImageColor3 = Colors.Accent
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+    scrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    scrollFrame.Parent = frame
     
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 15)
-    corner.Parent = content
+    corner.Parent = scrollFrame
     
-    return content
+    return scrollFrame
 end
-local function CreateToggleSwitch(parent, featureName, defaultState)
-    local toggle = Instance.new("Frame")
-    toggle.Size = UDim2.new(0, 55, 0, 28)
-    toggle.BackgroundColor3 = Colors.Inactive
-    toggle.BorderSizePixel = 0
-    toggle.Parent = parent
-    
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 14)
-    corner.Parent = toggle
-    
-    local slider = Instance.new("Frame")
-    slider.Size = UDim2.new(0, 22, 0, 22)
-    slider.Position = UDim2.new(0, 3, 0.5, -11)
-    slider.BackgroundColor3 = Colors.Text
-    slider.BorderSizePixel = 0
-    slider.Parent = toggle
-    
-    local sliderCorner = Instance.new("UICorner")
-    sliderCorner.CornerRadius = UDim.new(0.5, 0)
-    sliderCorner.Parent = slider
-    
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 1, 0)
-    btn.Position = UDim2.new(0, 0, 0, 0)
-    btn.BackgroundTransparency = 1
-    btn.BorderSizePixel = 0
-    btn.Parent = toggle
-    
-    local isActive = defaultState or false
-    
-    local function UpdateToggle(state)
-        local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-        
-        if state then
-            toggle.BackgroundColor3 = Colors.Active
-            TweenService:Create(slider, tweenInfo, {Position = UDim2.new(0, 30, 0.5, -11)}):Play()
-        else
-            toggle.BackgroundColor3 = Colors.Inactive
-            TweenService:Create(slider, tweenInfo, {Position = UDim2.new(0, 3, 0.5, -11)}):Play()
-        end
-    end
-    
-    btn.MouseButton1Click:Connect(function()
-        isActive = not isActive
-        Features[featureName] = isActive
-        UpdateToggle(isActive)
-    end)
-    
-    return toggle, btn, function(state)
-        isActive = state
-        Features[featureName] = state
-        UpdateToggle(state)
-    end
-end
-local function CreateFeatureRow(parent, title, featureName, yPos)
+local function CreateToggleSwitch(parent, featureName, yPos)
     local row = Instance.new("Frame")
-    row.Size = UDim2.new(1, -20, 0, 60)
+    row.Size = UDim2.new(1, -20, 0, 55)
     row.Position = UDim2.new(0, 10, 0, yPos)
     row.BackgroundColor3 = Colors.BackgroundLight
     row.BorderSizePixel = 0
     row.Parent = parent
     
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 12)
-    corner.Parent = row
+    local rowCorner = Instance.new("UICorner")
+    rowCorner.CornerRadius = UDim.new(0, 10)
+    rowCorner.Parent = row
     
     local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1, -70, 1, 0)
+    titleLabel.Size = UDim2.new(1, -100, 1, 0)
     titleLabel.Position = UDim2.new(0, 15, 0, 0)
     titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = title
+    titleLabel.Text = featureName
     titleLabel.TextColor3 = Colors.Text
-    titleLabel.TextSize = 16
+    titleLabel.TextSize = 15
     titleLabel.Font = Enum.Font.GothamBold
     titleLabel.TextXAlignment = Enum.TextXAlignment.Left
     titleLabel.Parent = row
     
-    local toggle, toggleBtn, updateFunc = CreateToggleSwitch(row, featureName, false)
-    toggle.Position = UDim2.new(1, -65, 0.5, -14)
+    local toggleBtn = Instance.new("TextButton")
+    toggleBtn.Size = UDim2.new(0, 80, 0, 35)
+    toggleBtn.Position = UDim2.new(1, -90, 0.5, -17.5)
+    toggleBtn.BackgroundColor3 = Colors.Inactive
+    toggleBtn.BorderSizePixel = 0
+    toggleBtn.Text = "[OFF]"
+    toggleBtn.TextColor3 = Colors.TextDim
+    toggleBtn.TextSize = 14
+    toggleBtn.Font = Enum.Font.GothamBold
+    toggleBtn.Parent = row
     
-    return row, toggle, toggleBtn, updateFunc
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 8)
+    btnCorner.Parent = toggleBtn
+    
+    local isActive = false
+    
+    toggleBtn.MouseButton1Click:Connect(function()
+        isActive = not isActive
+        Features[featureName] = isActive
+        
+        if isActive then
+            toggleBtn.BackgroundColor3 = Colors.Active
+            toggleBtn.Text = "[ON]"
+            toggleBtn.TextColor3 = Colors.Text
+        else
+            toggleBtn.BackgroundColor3 = Colors.Inactive
+            toggleBtn.Text = "[OFF]"
+            toggleBtn.TextColor3 = Colors.TextDim
+        end
+    end)
+    
+    return row, toggleBtn
 end
 local function CreateToggleButton(screenGui)
     local btn = Instance.new("TextButton")
@@ -300,142 +310,147 @@ local function CreateToggleButton(screenGui)
     return btn
 end
 -- ===========================================================================
--- SPEED BYPASS SYSTEM
+-- PLAYER ESP SYSTEM
 -- ===========================================================================
-local function EnableSpeedBypass()
-    SafeCall(function()
-        if not Humanoid then return end
-        
-        local speedValue = 45
-        local humanoidMeta = getrawmetatable(Humanoid)
-        local protected = isreadonly(humanoidMeta)
-        
-        if not protected then
-            setreadonly(humanoidMeta, false)
-            humanoidMeta.__newindex = newcclosure(function(self, prop, value)
-                if prop == "WalkSpeed" then
-                    speedValue = value
-                    rawset(self, "WalkSpeed", 45)
-                else
-                    rawset(self, prop, value)
-                end
-            end)
-            setreadonly(humanoidMeta, true)
+local function CleanupPlayerESP()
+    for _, label in ipairs(ESPLabels) do
+        if label and label.Parent then
+            label:Destroy()
         end
-        
-        rawset(Humanoid, "WalkSpeed", 45)
-        print(string.format("[%s] Speed Bypass Enabled", SCRIPT_NAME))
-    end)
+    end
+    for _, thumb in ipairs(ESPThumbnails) do
+        if thumb and thumb.Parent then
+            thumb:Destroy()
+        end
+    end
+    ESPLabels = {}
+    ESPThumbnails = {}
 end
-local function DisableSpeedBypass()
-    SafeCall(function()
-        if not Humanoid then return end
-        rawset(Humanoid, "WalkSpeed", 16)
-        print(string.format("[%s] Speed Bypass Disabled", SCRIPT_NAME))
+local function GetPlayerThumbnail(playerId)
+    local success, thumbnailUrl = SafeCall(function()
+        return Players:GetUserThumbnailAsync(playerId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
     end)
+    
+    if success and thumbnailUrl then
+        return thumbnailUrl
+    end
+    return "rbxassetid://6035504008"
 end
-local function SpeedBypassLoop()
+local function PlayerESPLoop()
     while true do
-        task.wait(0.1)
+        task.wait(0.15)
         
         SafeCall(function()
-            if Features.SpeedBypass then
-                if Humanoid then
-                    rawset(Humanoid, "WalkSpeed", 45)
-                end
-            end
-        end)
-    end
-end
--- ===========================================================================
--- AUTO FARM SYSTEM
--- ===========================================================================
-local function FindQuestNPC()
-    for _, npc in ipairs(Workspace:GetDescendants()) do
-        if (npc.Name:find("Quest") or npc.Name:find("Npc")) and npc:IsA("Model") then
-            local human = npc:FindFirstChild("Humanoid")
-            if human then
-                return npc
-            end
-        end
-    end
-    return nil
-end
-local function FindQuestMobs(questNPC, maxDistance)
-    maxDistance = maxDistance or 200
-    local mobs = {}
-    local questArea = questNPC and (questNPC:FindFirstChild("HumanoidRootPart") or questNPC.PrimaryPart)
-    
-    if questArea then
-        for _, mob in ipairs(Workspace:GetDescendants()) do
-            if mob.Name:find("Mob") or mob.Name:find("Enemy") then
-                local mobPart = mob:FindFirstChild("HumanoidRootPart") or mob:FindFirstChildWhichIsA("BasePart")
-                if mobPart then
-                    local dist = GetDistance(questArea, mobPart)
-                    if dist < maxDistance then
-                        table.insert(mobs, { mob = mob, part = mobPart, distance = dist })
-                    end
-                end
-            end
-        end
-    end
-    
-    table.sort(mobs, function(a, b) return a.distance < b.distance end)
-    return mobs
-end
-local function SmoothTeleport(targetPosition)
-    SafeCall(function()
-        if not HumanoidRootPart then return end
-        
-        local targetCFrame = CFrame.new(targetPosition.X, targetPosition.Y + 5, targetPosition.Z)
-        local tweenInfo = TweenInfo.new(1.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-        local tween = TweenService:Create(HumanoidRootPart, tweenInfo, {CFrame = targetCFrame})
-        
-        tween:Play()
-        tween.Completed:Wait()
-    end)
-end
-local function AutoClickCombat()
-    SafeCall(function()
-        VirtualUser:CaptureController()
-        VirtualUser:ClickButton1(Vector2.new(500, 500))
-        task.wait(0.1)
-        VirtualUser:ClickButton1(Vector2.new(500, 500))
-    end)
-end
-local function AutoFarmLoop()
-    while true do
-        task.wait(0.3)
-        
-        SafeCall(function()
-            if Features.AutoFarm then
-                local questNPC = FindQuestNPC()
+            if Features.PlayerESP then
+                CleanupPlayerESP()
                 
-                if questNPC then
-                    local questPart = questNPC:FindFirstChild("HumanoidRootPart") or questNPC.PrimaryPart
-                    
-                    if questPart then
-                        local dist = GetDistance(HumanoidRootPart, questPart)
-                        
-                        if dist > 60 then
-                            SmoothTeleport(questPart.Position)
-                        else
-                            SafeCall(function()
-                                local acceptQuest = ReplicatedStorage:FindFirstChild("AcceptQuest")
-                                if acceptQuest and acceptQuest:IsA("RemoteEvent") then
-                                    acceptQuest:FireServer()
-                                end
-                            end)
-                        end
-                    end
-                    
-                    local mobs = FindQuestMobs(questNPC, 80)
-                    
-                    if #mobs > 0 then
-                        local closestMob = mobs[1]
-                        if closestMob and closestMob.distance < 50 then
-                            Humanoid:MoveTowards(closestMob.part.Position)
-                            AutoClickCombat()
+                for _, player in ipairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer and player.Character then
+                        local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+                        if hrp then
+                            local onScreen, screenPos = Camera:WorldToViewportPoint(hrp.Position)
+                            if onScreen and screenPos.Z > 0 then
+                                local dist = GetDistance(HumanoidRootPart, hrp)
+                                local humanoid = player.Character:FindFirstChild("Humanoid")
+                                local health = humanoid and humanoid.Health or 0
+                                local maxHealth = humanoid and humanoid.MaxHealth or 100
+                                local fruit = GetPlayerFruit(player)
+                                local isEnemy = IsEnemyPlayer(player)
+                                
+                                local textColor = isEnemy and Colors.Enemy or Colors.Ally
+                                
+                                -- Create BillboardGui
+                                local billGui = Instance.new("BillboardGui")
+                                billGui.Size = UDim2.new(0, 180, 0, 80)
+                                billGui.StudsOffset = Vector3.new(0, 4, 0)
+                                billGui.AlwaysOnTop = true
+                                billGui.Parent = hrp
+                                
+                                local bgFrame = Instance.new("Frame")
+                                bgFrame.Size = UDim2.new(1, 0, 1, 0)
+                                bgFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+                                bgFrame.BackgroundTransparency = 0.7
+                                bgFrame.BorderSizePixel = 0
+                                bgFrame.Parent = billGui
+                                
+                                local bgCorner = Instance.new("UICorner")
+                                bgCorner.CornerRadius = UDim.new(0, 8)
+                                bgCorner.Parent = bgFrame
+                                
+                                -- Avatar thumbnail
+                                local avatarFrame = Instance.new("ImageLabel")
+                                avatarFrame.Size = UDim2.new(0, 32, 0, 32)
+                                avatarFrame.Position = UDim2.new(0, 8, 0.5, -16)
+                                avatarFrame.Image = GetPlayerThumbnail(player.UserId)
+                                avatarFrame.BackgroundTransparency = 1
+                                avatarFrame.Parent = bgFrame
+                                
+                                local avatarCorner = Instance.new("UICorner")
+                                avatarCorner.CornerRadius = UDim.new(0.5, 0)
+                                avatarCorner.Parent = avatarFrame
+                                
+                                -- Player name
+                                local nameLabel = Instance.new("TextLabel")
+                                nameLabel.Size = UDim2.new(1, -50, 0, 20)
+                                nameLabel.Position = UDim2.new(0, 46, 0, 6)
+                                nameLabel.BackgroundTransparency = 1
+                                nameLabel.Text = player.Name
+                                nameLabel.TextColor3 = Colors.Text
+                                nameLabel.TextSize = 14
+                                nameLabel.Font = Enum.Font.GothamBold
+                                nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+                                nameLabel.Parent = bgFrame
+                                
+                                -- Distance
+                                local distLabel = Instance.new("TextLabel")
+                                distLabel.Size = UDim2.new(1, -50, 0, 18)
+                                distLabel.Position = UDim2.new(0, 46, 0, 26)
+                                distLabel.BackgroundTransparency = 1
+                                distLabel.Text = string.format("%.0f m", dist)
+                                distLabel.TextColor3 = Colors.TextDim
+                                distLabel.TextSize = 13
+                                distLabel.Font = Enum.Font.Gotham
+                                distLabel.TextXAlignment = Enum.TextXAlignment.Left
+                                distLabel.Parent = bgFrame
+                                
+                                -- Fruit
+                                local fruitLabel = Instance.new("TextLabel")
+                                fruitLabel.Size = UDim2.new(1, -50, 0, 18)
+                                fruitLabel.Position = UDim2.new(0, 46, 0, 44)
+                                fruitLabel.BackgroundTransparency = 1
+                                fruitLabel.Text = "🍎 " .. fruit
+                                fruitLabel.TextColor3 = Colors.AccentLight
+                                fruitLabel.TextSize = 13
+                                fruitLabel.Font = Enum.Font.Gotham
+                                fruitLabel.TextXAlignment = Enum.TextXAlignment.Left
+                                fruitLabel.Parent = bgFrame
+                                
+                                -- Health bar
+                                local healthBarBg = Instance.new("Frame")
+                                healthBarBg.Size = UDim2.new(1, -50, 0, 6)
+                                healthBarBg.Position = UDim2.new(0, 46, 1, -12)
+                                healthBarBg.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+                                healthBarBg.BorderSizePixel = 0
+                                healthBarBg.Parent = bgFrame
+                                
+                                local healthBarBgCorner = Instance.new("UICorner")
+                                healthBarBgCorner.CornerRadius = UDim.new(0, 3)
+                                healthBarBgCorner.Parent = healthBarBg
+                                
+                                local healthBar = Instance.new("Frame")
+                                healthBar.Size = UDim2.new(health / maxHealth, 0, 1, 0)
+                                healthBar.Position = UDim2.new(0, 0, 0, 0)
+                                healthBar.BackgroundColor3 = textColor
+                                healthBar.BorderSizePixel = 0
+                                healthBar.Parent = healthBarBg
+                                
+                                local healthBarCorner = Instance.new("UICorner")
+                                healthBarCorner.CornerRadius = UDim.new(0, 3)
+                                healthBarCorner.Parent = healthBar
+                                
+                                table.insert(ESPLabels, billGui)
+                                table.insert(ESPThumbnails, avatarFrame)
+                            end
                         end
                     end
                 end
@@ -457,12 +472,16 @@ local function CleanupSwordDealerESP()
             tracer:Destroy()
         end
     end
+    if DealerAlert and DealerAlert.Parent then
+        DealerAlert:Destroy()
+        DealerAlert = nil
+    end
     ESPLabels = {}
     TracerLines = {}
 end
 local function CreateTracer(targetPart, color)
     local tracer = TracerLines[targetPart]
-    local tracerColor = color or Colors.Accent
+    local tracerColor = color or Colors.Purple
     
     if not tracer then
         local line = Instance.new("Beam")
@@ -484,7 +503,9 @@ local function SwordDealerESPLoop()
                 local dealerFound = false
                 
                 for _, npc in ipairs(Workspace:GetDescendants()) do
-                    if (npc.Name:find("Legendary") and npc.Name:find("Sword")) or npc.Name:find("Sword Dealer") then
+                    if (npc.Name:find("Legendary") and npc.Name:find("Sword")) or 
+                       npc.Name:find("Sword Dealer") or 
+                       npc.Name:find("Legendary Sword") then
                         dealerFound = true
                         local hrp = npc:FindFirstChild("HumanoidRootPart") or npc:FindFirstChildWhichIsA("BasePart")
                         
@@ -498,57 +519,58 @@ local function SwordDealerESPLoop()
                                 if not label then
                                     label = Instance.new("TextLabel")
                                     label.Name = "SwordDealer"
-                                    label.Size = UDim2.new(0, 180, 0, 40)
+                                    label.Size = UDim2.new(0, 200, 0, 45)
                                     label.BackgroundTransparency = 1
-                                    label.TextColor3 = Colors.AccentLight
+                                    label.TextColor3 = Colors.Purple
                                     label.TextStrokeTransparency = 0
                                     label.Font = Enum.Font.GothamBold
-                                    label.TextSize = 14
+                                    label.TextSize = 15
                                     label.TextXAlignment = Enum.TextXAlignment.Left
                                     label.ZIndex = 10
                                     label.Parent = Camera
                                     ESPLabels["SwordDealer"] = label
                                 end
                                 
-                                label.Position = UDim2.new(0, screenPos.X - 90, 0, screenPos.Y - 50)
+                                label.Position = UDim2.new(0, screenPos.X - 100, 0, screenPos.Y - 55)
                                 label.Text = "⚔️ LEGENDARY SWORD DEALER\n" .. string.format("%.0f m", dist)
                                 
-                                CreateTracer(hrp, Colors.Accent)
+                                CreateTracer(hrp, Colors.Purple)
                             end
                         end
                     end
                 end
                 
                 if dealerFound then
-                    local alert = ESPLabels["DealerAlert"]
-                    if not alert then
-                        alert = Instance.new("TextLabel")
-                        alert.Name = "DealerAlert"
-                        alert.Size = UDim2.new(0, 400, 0, 80)
-                        alert.Position = UDim2.new(0.5, -200, 0.2, 0)
-                        alert.BackgroundColor3 = Colors.Accent
-                        alert.BackgroundTransparency = 0.4
-                        alert.Text = "⚔️ SWORD DEALER SPAWNED! ⚔️"
-                        alert.TextColor3 = Colors.Text
-                        alert.TextStrokeTransparency = 0
-                        alert.Font = Enum.Font.GothamBold
-                        alert.TextSize = 28
-                        alert.TextYAlignment = Enum.TextYAlignment.Top
-                        alert.ZIndex = 100
-                        alert.Parent = Camera
-                        ESPLabels["DealerAlert"] = alert
+                    if not DealerAlert then
+                        DealerAlert = Instance.new("TextLabel")
+                        DealerAlert.Size = UDim2.new(0, 450, 0, 90)
+                        DealerAlert.Position = UDim2.new(0.5, -225, 0.2, 0)
+                        DealerAlert.BackgroundColor3 = Colors.Purple
+                        DealerAlert.BackgroundTransparency = 0.3
+                        DealerAlert.Text = "⚔️ SWORD DEALER SPAWNED! ⚔️"
+                        DealerAlert.TextColor3 = Colors.Text
+                        DealerAlert.TextStrokeTransparency = 0
+                        DealerAlert.Font = Enum.Font.GothamBold
+                        DealerAlert.TextSize = 32
+                        DealerAlert.TextYAlignment = Enum.TextYAlignment.Top
+                        DealerAlert.ZIndex = 100
+                        DealerAlert.Parent = Camera
                         
-                        task.delay(8, function()
-                            if alert and alert.Parent then
-                                alert:Destroy()
+                        local alertCorner = Instance.new("UICorner")
+                        alertCorner.CornerRadius = UDim.new(0, 12)
+                        alertCorner.Parent = DealerAlert
+                        
+                        task.delay(10, function()
+                            if DealerAlert and DealerAlert.Parent then
+                                DealerAlert:Destroy()
+                                DealerAlert = nil
                             end
                         end)
                     end
                 else
-                    local alert = ESPLabels["DealerAlert"]
-                    if alert then
-                        alert:Destroy()
-                        ESPLabels["DealerAlert"] = nil
+                    if DealerAlert and DealerAlert.Parent then
+                        DealerAlert:Destroy()
+                        DealerAlert = nil
                     end
                 end
             else
@@ -584,6 +606,17 @@ local function CreateFruitESPLabel(part, labelText, labelColor)
         label.AlwaysOnTop = true
         label.Parent = part
         
+        local bgFrame = Instance.new("Frame")
+        bgFrame.Size = UDim2.new(1, 0, 1, 0)
+        bgFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        bgFrame.BackgroundTransparency = 0.75
+        bgFrame.BorderSizePixel = 0
+        bgFrame.Parent = label
+        
+        local bgCorner = Instance.new("UICorner")
+        bgCorner.CornerRadius = UDim.new(0, 8)
+        bgCorner.Parent = bgFrame
+        
         local textLabel = Instance.new("TextLabel")
         textLabel.Name = "TextLabel"
         textLabel.Size = UDim2.new(1, 0, 1, 0)
@@ -593,7 +626,7 @@ local function CreateFruitESPLabel(part, labelText, labelColor)
         textLabel.Font = Enum.Font.GothamBold
         textLabel.TextSize = 14
         textLabel.TextXAlignment = Enum.TextXAlignment.Center
-        textLabel.Parent = label
+        textLabel.Parent = bgFrame
         
         ESPLabels[part] = label
         return textLabel
@@ -622,7 +655,7 @@ local function CreateSelectionBox(part, color)
 end
 local function FruitESPLoop()
     while true do
-        task.wait(0.3)
+        task.wait(0.25)
         
         SafeCall(function()
             if Features.FruitESP then
@@ -669,7 +702,7 @@ local function CleanupBerryESP()
 end
 local function BerryESPLoop()
     while true do
-        task.wait(0.3)
+        task.wait(0.25)
         
         SafeCall(function()
             if Features.BerryESP then
@@ -683,11 +716,10 @@ local function BerryESPLoop()
                         local part = obj:FindFirstChildWhichIsA("BasePart") or obj
                         if part then
                             local dist = GetDistance(HumanoidRootPart, part)
-                            local objName = obj.Name:match("(.+)-") or obj.Name:match("(.+) ") or "Material"
                             
-                            CreateSelectionBox(part, Colors.Green)
+                            CreateSelectionBox(part, Colors.Ally)
                             
-                            local textLabel = CreateFruitESPLabel(part, string.format("🌟 RESOURCE MATERIAL\n%.0f m", dist), Colors.Green)
+                            local textLabel = CreateFruitESPLabel(part, string.format("🌟 RESOURCE MATERIAL\n%.0f m", dist), Colors.Ally)
                             if textLabel then
                                 textLabel.Text = string.format("🌟 RESOURCE MATERIAL\n%.0f m", dist)
                             end
@@ -701,21 +733,78 @@ local function BerryESPLoop()
     end
 end
 -- ===========================================================================
+-- CHEST ESP SYSTEM
+-- ===========================================================================
+local function CleanupChestESP()
+    for _, label in ipairs(ESPLabels) do
+        if label and label.Parent then
+            label:Destroy()
+        end
+    end
+    for _, box in ipairs(SelectionBoxes) do
+        if box and box.Parent then
+            box:Destroy()
+        end
+    end
+    ESPLabels = {}
+    SelectionBoxes = {}
+end
+local function ChestESPLoop()
+    while true do
+        task.wait(0.25)
+        
+        SafeCall(function()
+            if Features.ChestESP then
+                CleanupChestESP()
+                
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    local isChest = obj.Name:find("Chest") or obj.Name:find("Gold") or obj.Name:find("Silver") or obj.Name:find("Diamond")
+                    
+                    if isChest then
+                        local part = obj:FindFirstChildWhichIsA("BasePart") or obj
+                        if part then
+                            local dist = GetDistance(HumanoidRootPart, part)
+                            local chestType = "Chest"
+                            
+                            if obj.Name:find("Gold") then
+                                chestType = "Gold Chest"
+                            elseif obj.Name:find("Silver") then
+                                chestType = "Silver Chest"
+                            elseif obj.Name:find("Diamond") then
+                                chestType = "Diamond Chest"
+                            end
+                            
+                            CreateSelectionBox(part, Colors.Gold)
+                            
+                            local textLabel = CreateFruitESPLabel(part, string.format("📦 %s\n%.0f m", chestType, dist), Colors.Gold)
+                            if textLabel then
+                                textLabel.Text = string.format("📦 %s\n%.0f m", chestType, dist)
+                            end
+                        end
+                    end
+                end
+            else
+                CleanupChestESP()
+            end
+        end)
+    end
+end
+-- ===========================================================================
 -- MAIN INITIALIZATION
 -- ===========================================================================
 local function InitializeUI()
     local screenGui = CreateScreenGui()
     local mainFrame = CreateMainFrame(screenGui)
     local header, closeBtn = CreateHeader(mainFrame)
-    local content = CreateContentArea(mainFrame)
+    local scrollFrame = CreateScrollingFrame(mainFrame)
     local toggleButton = CreateToggleButton(screenGui)
     
-    -- Create feature rows
-    CreateFeatureRow(content, "⚡ Bypass Speed", "SpeedBypass", 0)
-    CreateFeatureRow(content, "🎯 Auto Farm Level", "AutoFarm", 70)
-    CreateFeatureRow(content, "⚔️ Sword Dealer ESP", "SwordDealerESP", 140)
-    CreateFeatureRow(content, "🍎 Devil Fruit ESP", "FruitESP", 210)
-    CreateFeatureRow(content, "🌟 Berry & Haki ESP", "BerryESP", 280)
+    -- Create toggle switches
+    CreateToggleSwitch(scrollFrame, "👤 Player ESP", 0)
+    CreateToggleSwitch(scrollFrame, "⚔️ Sword Dealer ESP", 60)
+    CreateToggleSwitch(scrollFrame, "🍎 Devil Fruit ESP", 120)
+    CreateToggleSwitch(scrollFrame, "🌟 Berry & Haki ESP", 180)
+    CreateToggleSwitch(scrollFrame, "📦 Chest ESP", 240)
     
     -- Close button logic
     closeBtn.MouseButton1Click:Connect(function()
@@ -766,10 +855,6 @@ LocalPlayer.CharacterAdded:Connect(function(newCharacter)
     Humanoid = Character:WaitForChild("Humanoid")
     HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
     
-    if Features.SpeedBypass then
-        EnableSpeedBypass()
-    end
-    
     print(string.format("[%s] Character loaded", SCRIPT_NAME))
 end)
 -- ===========================================================================
@@ -777,12 +862,9 @@ end)
 -- ===========================================================================
 -- Initialize UI
 local screenGui, mainFrame, toggleButton = InitializeUI()
--- Start all loops
+-- Start all ESP loops
 coroutine.wrap(function()
-    SpeedBypassLoop()
-end)()
-coroutine.wrap(function()
-    AutoFarmLoop()
+    PlayerESPLoop()
 end)()
 coroutine.wrap(function()
     SwordDealerESPLoop()
@@ -793,20 +875,25 @@ end)()
 coroutine.wrap(function()
     BerryESPLoop()
 end)()
+coroutine.wrap(function()
+    ChestESPLoop()
+end)()
 -- ===========================================================================
 -- STARTUP MESSAGE
 -- ===========================================================================
 print("")
 print("╔════════════════════════════════════════════╗")
-print("║    BLOX FRUITS PREMIUM HUB                 ║")
+print("║    BLOX FRUITS ESP HUB                     ║")
 print("║    v" .. SCRIPT_VERSION .. "                              ║")
 print("╠════════════════════════════════════════════╣")
-print("║  Features Loaded:                          ║")
-print("║    ✓ Speed Bypass (45 WalkSpeed)           ║")
-print("║    ✓ Auto Farm Level (Quest + Combat)      ║")
+print("║  ESP Features Loaded:                      ║")
+print("║    ✓ Player ESP (Name, Distance, Fruit)    ║")
+print("║    ✓ Avatar Thumbnails                     ║")
+print("║    ✓ Team-Based Color System               ║")
 print("║    ✓ Legendary Sword Dealer ESP            ║")
 print("║    ✓ Devil Fruit ESP (Box + Label)         ║")
 print("║    ✓ Berry & Haki Material ESP             ║")
+print("║    ✓ Chest ESP (Gold/Silver/Diamond)       ║")
 print("╠════════════════════════════════════════════╣")
 print("║  All features wrapped in pcall!            ║")
 print("║  Click ⚙️ to minimize, click again to open ║")
