@@ -1,901 +1,910 @@
+-- 🔮 ONYX MATRIX PROJECTS v1.0
+-- Premium Mobile Script Hub for Blox Fruits (Roblox)
+-- UI Core Framework & Tab Navigation System
+-- Optimized for Delta Executor (Android)
+
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local CoreGui = game:GetService("CoreGui")
-local Workspace = game:GetService("Workspace")
--- ===========================================================================
--- CORE VARIABLES
--- ===========================================================================
+local TweenService = game:GetService("TweenService")
+local GuiService = game:GetService("GuiService")
+
 local LocalPlayer = Players.LocalPlayer
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local Humanoid = Character:WaitForChild("Humanoid")
-local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
-local Camera = Workspace.CurrentCamera
--- Script Configuration
-local SCRIPT_NAME = "BloxFruitsESP"
-local SCRIPT_VERSION = "1.0.0"
-local GUI_WIDTH = 320
-local GUI_HEIGHT = 500
--- Color Definitions
-local Colors = {
-    Background = Color3.fromRGB(10, 10, 15),
-    BackgroundLight = Color3.fromRGB(20, 20, 26),
-    Accent = Color3.fromRGB(139, 92, 246),
-    AccentLight = Color3.fromRGB(168, 85, 247),
-    Active = Color3.fromRGB(16, 185, 129),
-    Inactive = Color3.fromRGB(60, 60, 65),
-    Enemy = Color3.fromRGB(239, 68, 68),
-    Ally = Color3.fromRGB(34, 197, 94),
-    Text = Color3.fromRGB(255, 255, 255),
-    TextDim = Color3.fromRGB(150, 150, 160),
-    Gold = Color3.fromRGB(255, 215, 0),
-    Purple = Color3.fromRGB(139, 92, 246)
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Configuration
+local CONFIG = {
+    MainFrameSize = UDim2.new(0, 450, 0, 300),
+    MainFramePosition = UDim2.new(0.5, -225, 0.5, -150),
+    BackgroundColor = Color3.fromRGB(10, 10, 15),
+    NeonPurple = Color3.fromRGB(180, 0, 255),
+    TextColor = Color3.fromRGB(255, 255, 255),
+    SecondaryText = Color3.fromRGB(180, 180, 180),
+    ButtonColor = Color3.fromRGB(20, 20, 30),
+    ButtonHover = Color3.fromRGB(30, 30, 45),
+    TabHeight = 40,
+    ColumnWidth = 210,
+    ToggleSize = 40
 }
--- Feature State Table
-local Features = {
-    PlayerESP = false,
-    SwordDealerESP = false,
-    FruitESP = false,
-    BerryESP = false,
-    ChestESP = false
-}
--- ESP Objects Storage
-local ESPLabels = {}
-local ESPThumbnails = {}
-local SelectionBoxes = {}
-local TracerLines = {}
-local DealerAlert = nil
--- ===========================================================================
--- SAFE CALL WRAPPER
--- ===========================================================================
-local function SafeCall(func, ...)
-    local success, result = pcall(func, ...)
-    if not success then
-        warn(string.format("[%s] Error: %s", SCRIPT_NAME, tostring(result)))
-        return false
+
+-- UI Instance Cache
+local UI = {}
+
+-- Utility Functions
+local function CreateInstance(instanceType, properties)
+    local instance = Instance.new(instanceType)
+    for property, value in pairs(properties) do
+        instance[property] = value
     end
-    return true, result
+    return instance
 end
--- ===========================================================================
--- UTILITY FUNCTIONS
--- ===========================================================================
-local function GetDistance(part1, part2)
-    if part1 and part2 then
-        return (part1.Position - part2.Position).Magnitude
-    end
-    return 999999
+
+local function CreateUIStroke(color, thickness, transparency)
+    return CreateInstance("UIStroke", {
+        Color = color,
+        Thickness = thickness,
+        Transparency = transparency or 0
+    })
 end
-local function IsOnScreen(worldPosition)
-    local onScreen, screenPosition = Camera:WorldToViewportPoint(worldPosition)
-    return onScreen and screenPosition.Z > 0
+
+local function CreateTextLabel(size, position, text, textColor, fontSize, parent)
+    local label = CreateInstance("TextLabel", {
+        Size = size,
+        Position = position,
+        BackgroundTransparency = 1,
+        Text = text,
+        TextColor3 = textColor,
+        TextSize = fontSize,
+        Font = Enum.Font.Gotham,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        TextYAlignment = Enum.TextYAlignment.Center,
+        Parent = parent
+    })
+    return label
 end
-local function IsEnemyPlayer(player)
-    -- Check if player is on different team or in PvP
-    local playerTeam = player.Team
-    local localTeam = LocalPlayer.Team
-    
-    if playerTeam and localTeam then
-        if playerTeam ~= localTeam then
-            return true
-        end
-    end
-    
-    -- Check for PvP indicators in character
-    local playerCharacter = player.Character
-    if playerCharacter then
-        local attributes = playerCharacter:FindFirstChild("Attributes")
-        if attributes then
-            local pvpMode = attributes:FindFirstChild("PvP")
-            if pvpMode then
-                return true
-            end
-        end
-    end
-    
-    return false
+
+local function CreateButton(size, position, backgroundColor, parent)
+    local button = CreateInstance("TextButton", {
+        Size = size,
+        Position = position,
+        BackgroundColor3 = backgroundColor,
+        Text = "",
+        AutoButtonColor = false,
+        Parent = parent
+    })
+    return button
 end
-local function GetPlayerFruit(player)
-    local fruits = player:FindFirstChild("Fruits")
-    if fruits then
-        local currentFruit = fruits:FindFirstChild("Current")
-        if currentFruit then
-            return currentFruit.Value or "None"
-        end
-    end
-    return "None"
+
+-- Tween Helper
+local function TweenObject(instance, properties, duration, style, direction)
+    local tweenInfo = TweenInfo.new(
+        duration or 0.3,
+        style or Enum.EasingStyle.Quad,
+        direction or Enum.EasingDirection.Out
+    )
+    local tween = TweenService:Create(instance, tweenInfo, properties)
+    tween:Play()
+    return tween
 end
--- ===========================================================================
--- UI CREATION FUNCTIONS
--- ===========================================================================
-local function CreateScreenGui()
-    local gui = Instance.new("ScreenGui")
-    gui.Name = SCRIPT_NAME .. "_Gui"
-    gui.ResetOnSpawn = false
-    gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-    return gui
+
+-- ============================================
+-- MAIN UI CONSTRUCTION
+-- ============================================
+
+-- ScreenGui Container
+UI.ScreenGui = CreateInstance("ScreenGui", {
+    Name = "OnyxMatrixProjects",
+    Parent = PlayerGui,
+    ResetOnSpawn = false,
+    ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+})
+
+-- Main Frame
+UI.MainFrame = CreateInstance("Frame", {
+    Name = "MainFrame",
+    Size = CONFIG.MainFrameSize,
+    Position = CONFIG.MainFramePosition,
+    BackgroundColor3 = CONFIG.BackgroundColor,
+    ClipsDescendants = true,
+    Parent = UI.ScreenGui
+})
+
+-- Neon Purple Border (UIStroke)
+CreateUIStroke(CONFIG.NeonPurple, 2, 0).Parent = UI.MainFrame
+
+-- UI Corner for rounded edges
+CreateInstance("UICorner", {
+    CornerRadius = UDim.new(0, 8),
+    Parent = UI.MainFrame
+})
+
+-- Title Bar
+UI.TitleBar = CreateInstance("Frame", {
+    Name = "TitleBar",
+    Size = UDim2.new(1, 0, 0, 30),
+    Position = UDim2.new(0, 0, 0, 0),
+    BackgroundColor3 = Color3.fromRGB(15, 15, 25),
+    Parent = UI.MainFrame
+})
+CreateInstance("UICorner", {
+    CornerRadius = UDim.new(0, 8),
+    Parent = UI.TitleBar
+})
+CreateTextLabel(
+    UDim2.new(0, 200, 1, 0),
+    UDim2.new(0, 10, 0, 0),
+    "🔮 ONYX MATRIX v1.0",
+    CONFIG.NeonPurple,
+    14,
+    UI.TitleBar
+)
+
+-- Minimize Button (X)
+UI.MinimizeBtn = CreateButton(
+    UDim2.new(0, 30, 1, 0),
+    UDim2.new(1, -30, 0, 0),
+    CONFIG.ButtonColor,
+    UI.TitleBar
+)
+CreateInstance("UICorner", {
+    CornerRadius = UDim.new(0, 4),
+    Parent = UI.MinimizeBtn
+})
+CreateTextLabel(
+    UDim2.new(1, 0, 1, 0),
+    UDim2.new(0, 0, 0, 0),
+    "✕",
+    CONFIG.TextColor,
+    16,
+    UI.MinimizeBtn
+)
+
+-- ============================================
+-- TAB NAVIGATION SYSTEM
+-- ============================================
+
+-- Tab Container
+UI.TabContainer = CreateInstance("Frame", {
+    Name = "TabContainer",
+    Size = UDim2.new(1, -20, 0, CONFIG.TabHeight),
+    Position = UDim2.new(0, 10, 0, 40),
+    BackgroundTransparency = 1,
+    Parent = UI.MainFrame
+})
+
+-- Tab Buttons Data
+local TabNames = {"Main Farm", "Stats & Teleport", "Visuals & ESP", "Shop & Settings"}
+UI.TabButtons = {}
+UI.TabFrames = {}
+local ActiveTab = 1
+
+-- Create Tab Buttons
+local tabWidth = (CONFIG.MainFrameSize.X.Offset - 20) / 4
+for i, tabName in ipairs(TabNames) do
+    local tabBtn = CreateButton(
+        UDim2.new(0, tabWidth, 1, 0),
+        UDim2.new((i-1) * (1/4), 0, 0, 0),
+        i == 1 and CONFIG.NeonPurple or CONFIG.ButtonColor,
+        UI.TabContainer
+    )
+    CreateInstance("UICorner", {
+        CornerRadius = UDim.new(0, 4),
+        Parent = tabBtn
+    })
+    CreateTextLabel(
+        UDim2.new(1, 0, 1, 0),
+        UDim2.new(0, 0, 0, 0),
+        tabName,
+        CONFIG.TextColor,
+        12,
+        tabBtn
+    )
+    
+    UI.TabButtons[i] = {
+        Button = tabBtn,
+        Name = tabName,
+        Index = i
+    }
 end
-local function CreateMainFrame(screenGui)
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, GUI_WIDTH, 0, GUI_HEIGHT)
-    frame.Position = UDim2.new(0.5, -GUI_WIDTH/2, 0.5, -GUI_HEIGHT/2)
-    frame.BackgroundColor3 = Colors.Background
-    frame.BorderSizePixel = 0
-    frame.Parent = screenGui
+
+-- ============================================
+-- CONTENT FRAMES (4 Independent Pages)
+-- ============================================
+
+local function CreateTabContentFrame(tabIndex)
+    local contentFrame = CreateInstance("Frame", {
+        Name = "TabContent_" .. tabIndex,
+        Size = UDim2.new(1, -20, 1, -CONFIG.TabHeight - 50),
+        Position = UDim2.new(0, 10, 0, CONFIG.TabHeight + 50),
+        BackgroundTransparency = 1,
+        Visible = tabIndex == 1,
+        Parent = UI.MainFrame
+    })
     
-    -- Rounded corners
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 15)
-    corner.Parent = frame
+    -- Left Column ScrollingFrame
+    local leftColumn = CreateInstance("ScrollingFrame", {
+        Name = "LeftColumn",
+        Size = UDim2.new(0.5, -5, 1, 0),
+        Position = UDim2.new(0, 0, 0, 0),
+        BackgroundTransparency = 1,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        ScrollBarThickness = 4,
+        ScrollBarImageColor3 = CONFIG.NeonPurple,
+        Parent = contentFrame
+    })
     
-    -- Neon purple glowing border
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Colors.Accent
-    stroke.Transparency = 0.3
-    stroke.Thickness = 2
-    stroke.Parent = frame
+    -- Left Column UI Layout
+    CreateInstance("UIListLayout", {
+        Padding = UDim.new(0, 8),
+        Parent = leftColumn
+    })
+    CreateInstance("UIPadding", {
+        PaddingLeft = UDim.new(0, 5),
+        Parent = leftColumn
+    })
     
-    return frame
+    -- Right Column ScrollingFrame
+    local rightColumn = CreateInstance("ScrollingFrame", {
+        Name = "RightColumn",
+        Size = UDim2.new(0.5, -5, 1, 0),
+        Position = UDim2.new(0.5, 5, 0, 0),
+        BackgroundTransparency = 1,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        ScrollBarThickness = 4,
+        ScrollBarImageColor3 = CONFIG.NeonPurple,
+        Parent = contentFrame
+    })
+    
+    -- Right Column UI Layout
+    CreateInstance("UIListLayout", {
+        Padding = UDim.new(0, 8),
+        Parent = rightColumn
+    })
+    CreateInstance("UIPadding", {
+        PaddingLeft = UDim.new(0, 5),
+        Parent = rightColumn
+    })
+    
+    return {
+        Frame = contentFrame,
+        LeftColumn = leftColumn,
+        RightColumn = rightColumn
+    }
 end
-local function CreateHeader(frame)
-    local header = Instance.new("Frame")
-    header.Size = UDim2.new(1, 0, 0, 65)
-    header.Position = UDim2.new(0, 0, 0, 0)
-    header.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
-    header.BorderSizePixel = 0
-    header.Parent = frame
-    
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 15)
-    corner.Parent = header
-    
-    -- Bottom accent line
-    local border = Instance.new("Frame")
-    border.Size = UDim2.new(1, 0, 0, 2)
-    border.Position = UDim2.new(0, 0, 1, -2)
-    border.BackgroundColor3 = Colors.Accent
-    border.BorderSizePixel = 0
-    border.Parent = header
-    
-    -- Title
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, -50, 0, 28)
-    title.Position = UDim2.new(0, 15, 0, 8)
-    title.BackgroundTransparency = 1
-    title.Text = "👁️ ESP WORLD"
-    title.TextColor3 = Colors.AccentLight
-    title.TextSize = 20
-    title.Font = Enum.Font.GothamBold
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    title.Parent = header
-    
-    -- Subtitle
-    local subtitle = Instance.new("TextLabel")
-    subtitle.Size = UDim2.new(1, -50, 0, 18)
-    subtitle.Position = UDim2.new(0, 15, 0, 32)
-    subtitle.BackgroundTransparency = 1
-    subtitle.Text = "Premium ESP System"
-    subtitle.TextColor3 = Colors.TextDim
-    subtitle.TextSize = 13
-    subtitle.Font = Enum.Font.Gotham
-    subtitle.TextXAlignment = Enum.TextXAlignment.Left
-    subtitle.Parent = header
-    
-    -- Close Button (X)
-    local closeBtn = Instance.new("TextButton")
-    closeBtn.Size = UDim2.new(0, 35, 0, 35)
-    closeBtn.Position = UDim2.new(1, -45, 0.5, -17.5)
-    closeBtn.BackgroundColor3 = Colors.Enemy
-    closeBtn.BorderSizePixel = 0
-    closeBtn.ZIndex = 100
-    closeBtn.Text = "✕"
-    closeBtn.TextColor3 = Colors.Text
-    closeBtn.TextSize = 18
-    closeBtn.Font = Enum.Font.GothamBold
-    closeBtn.Parent = header
-    
-    local closeCorner = Instance.new("UICorner")
-    closeCorner.CornerRadius = UDim.new(0.5, 0)
-    closeCorner.Parent = closeBtn
-    
-    return header, closeBtn
+
+-- Create all 4 tab content frames
+for i = 1, 4 do
+    UI.TabFrames[i] = CreateTabContentFrame(i)
 end
-local function CreateScrollingFrame(frame)
-    local scrollFrame = Instance.new("ScrollingFrame")
-    scrollFrame.Size = UDim2.new(1, 0, 1, -65)
-    scrollFrame.Position = UDim2.new(0, 0, 0, 65)
-    scrollFrame.BackgroundColor3 = Colors.Background
-    scrollFrame.BorderSizePixel = 0
-    scrollFrame.ScrollBarThickness = 4
-    scrollFrame.ScrollBarImageColor3 = Colors.Accent
-    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-    scrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    scrollFrame.Parent = frame
-    
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 15)
-    corner.Parent = scrollFrame
-    
-    return scrollFrame
-end
-local function CreateToggleSwitch(parent, featureName, yPos)
-    local row = Instance.new("Frame")
-    row.Size = UDim2.new(1, -20, 0, 55)
-    row.Position = UDim2.new(0, 10, 0, yPos)
-    row.BackgroundColor3 = Colors.BackgroundLight
-    row.BorderSizePixel = 0
-    row.Parent = parent
-    
-    local rowCorner = Instance.new("UICorner")
-    rowCorner.CornerRadius = UDim.new(0, 10)
-    rowCorner.Parent = row
-    
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1, -100, 1, 0)
-    titleLabel.Position = UDim2.new(0, 15, 0, 0)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = featureName
-    titleLabel.TextColor3 = Colors.Text
-    titleLabel.TextSize = 15
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    titleLabel.Parent = row
-    
-    local toggleBtn = Instance.new("TextButton")
-    toggleBtn.Size = UDim2.new(0, 80, 0, 35)
-    toggleBtn.Position = UDim2.new(1, -90, 0.5, -17.5)
-    toggleBtn.BackgroundColor3 = Colors.Inactive
-    toggleBtn.BorderSizePixel = 0
-    toggleBtn.Text = "[OFF]"
-    toggleBtn.TextColor3 = Colors.TextDim
-    toggleBtn.TextSize = 14
-    toggleBtn.Font = Enum.Font.GothamBold
-    toggleBtn.Parent = row
-    
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 8)
-    btnCorner.Parent = toggleBtn
-    
-    local isActive = false
-    
-    toggleBtn.MouseButton1Click:Connect(function()
-        isActive = not isActive
-        Features[featureName] = isActive
-        
-        if isActive then
-            toggleBtn.BackgroundColor3 = Colors.Active
-            toggleBtn.Text = "[ON]"
-            toggleBtn.TextColor3 = Colors.Text
-        else
-            toggleBtn.BackgroundColor3 = Colors.Inactive
-            toggleBtn.Text = "[OFF]"
-            toggleBtn.TextColor3 = Colors.TextDim
-        end
-    end)
-    
-    return row, toggleBtn
-end
-local function CreateToggleButton(screenGui)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 40, 0, 40)
-    btn.Position = UDim2.new(1, -50, 0, 15)
-    btn.BackgroundColor3 = Colors.Accent
-    btn.BorderSizePixel = 0
-    btn.ZIndex = 1000
-    btn.Text = ""
-    btn.Visible = false
-    btn.Parent = screenGui
-    
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0.5, 0)
-    corner.Parent = btn
-    
-    local icon = Instance.new("TextLabel")
-    icon.Size = UDim2.new(1, 0, 1, 0)
-    icon.Position = UDim2.new(0, 0, 0, 0)
-    icon.BackgroundTransparency = 1
-    icon.Text = "⚙️"
-    icon.TextColor3 = Colors.Text
-    icon.TextSize = 22
-    icon.Font = Enum.Font.GothamBold
-    icon.Parent = btn
-    
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Colors.AccentLight
-    stroke.Transparency = 0.4
-    stroke.Thickness = 2
-    stroke.Parent = btn
-    
-    return btn
-end
--- ===========================================================================
--- PLAYER ESP SYSTEM
--- ===========================================================================
-local function CleanupPlayerESP()
-    for _, label in ipairs(ESPLabels) do
-        if label and label.Parent then
-            label:Destroy()
-        end
-    end
-    for _, thumb in ipairs(ESPThumbnails) do
-        if thumb and thumb.Parent then
-            thumb:Destroy()
-        end
-    end
-    ESPLabels = {}
-    ESPThumbnails = {}
-end
-local function GetPlayerThumbnail(playerId)
-    local success, thumbnailUrl = SafeCall(function()
-        return Players:GetUserThumbnailAsync(playerId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
-    end)
-    
-    if success and thumbnailUrl then
-        return thumbnailUrl
-    end
-    return "rbxassetid://6035504008"
-end
-local function PlayerESPLoop()
-    while true do
-        task.wait(0.15)
-        
-        SafeCall(function()
-            if Features.PlayerESP then
-                CleanupPlayerESP()
-                
-                for _, player in ipairs(Players:GetPlayers()) do
-                    if player ~= LocalPlayer and player.Character then
-                        local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-                        if hrp then
-                            local onScreen, screenPos = Camera:WorldToViewportPoint(hrp.Position)
-                            if onScreen and screenPos.Z > 0 then
-                                local dist = GetDistance(HumanoidRootPart, hrp)
-                                local humanoid = player.Character:FindFirstChild("Humanoid")
-                                local health = humanoid and humanoid.Health or 0
-                                local maxHealth = humanoid and humanoid.MaxHealth or 100
-                                local fruit = GetPlayerFruit(player)
-                                local isEnemy = IsEnemyPlayer(player)
-                                
-                                local textColor = isEnemy and Colors.Enemy or Colors.Ally
-                                
-                                -- Create BillboardGui
-                                local billGui = Instance.new("BillboardGui")
-                                billGui.Size = UDim2.new(0, 180, 0, 80)
-                                billGui.StudsOffset = Vector3.new(0, 4, 0)
-                                billGui.AlwaysOnTop = true
-                                billGui.Parent = hrp
-                                
-                                local bgFrame = Instance.new("Frame")
-                                bgFrame.Size = UDim2.new(1, 0, 1, 0)
-                                bgFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-                                bgFrame.BackgroundTransparency = 0.7
-                                bgFrame.BorderSizePixel = 0
-                                bgFrame.Parent = billGui
-                                
-                                local bgCorner = Instance.new("UICorner")
-                                bgCorner.CornerRadius = UDim.new(0, 8)
-                                bgCorner.Parent = bgFrame
-                                
-                                -- Avatar thumbnail
-                                local avatarFrame = Instance.new("ImageLabel")
-                                avatarFrame.Size = UDim2.new(0, 32, 0, 32)
-                                avatarFrame.Position = UDim2.new(0, 8, 0.5, -16)
-                                avatarFrame.Image = GetPlayerThumbnail(player.UserId)
-                                avatarFrame.BackgroundTransparency = 1
-                                avatarFrame.Parent = bgFrame
-                                
-                                local avatarCorner = Instance.new("UICorner")
-                                avatarCorner.CornerRadius = UDim.new(0.5, 0)
-                                avatarCorner.Parent = avatarFrame
-                                
-                                -- Player name
-                                local nameLabel = Instance.new("TextLabel")
-                                nameLabel.Size = UDim2.new(1, -50, 0, 20)
-                                nameLabel.Position = UDim2.new(0, 46, 0, 6)
-                                nameLabel.BackgroundTransparency = 1
-                                nameLabel.Text = player.Name
-                                nameLabel.TextColor3 = Colors.Text
-                                nameLabel.TextSize = 14
-                                nameLabel.Font = Enum.Font.GothamBold
-                                nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-                                nameLabel.Parent = bgFrame
-                                
-                                -- Distance
-                                local distLabel = Instance.new("TextLabel")
-                                distLabel.Size = UDim2.new(1, -50, 0, 18)
-                                distLabel.Position = UDim2.new(0, 46, 0, 26)
-                                distLabel.BackgroundTransparency = 1
-                                distLabel.Text = string.format("%.0f m", dist)
-                                distLabel.TextColor3 = Colors.TextDim
-                                distLabel.TextSize = 13
-                                distLabel.Font = Enum.Font.Gotham
-                                distLabel.TextXAlignment = Enum.TextXAlignment.Left
-                                distLabel.Parent = bgFrame
-                                
-                                -- Fruit
-                                local fruitLabel = Instance.new("TextLabel")
-                                fruitLabel.Size = UDim2.new(1, -50, 0, 18)
-                                fruitLabel.Position = UDim2.new(0, 46, 0, 44)
-                                fruitLabel.BackgroundTransparency = 1
-                                fruitLabel.Text = "🍎 " .. fruit
-                                fruitLabel.TextColor3 = Colors.AccentLight
-                                fruitLabel.TextSize = 13
-                                fruitLabel.Font = Enum.Font.Gotham
-                                fruitLabel.TextXAlignment = Enum.TextXAlignment.Left
-                                fruitLabel.Parent = bgFrame
-                                
-                                -- Health bar
-                                local healthBarBg = Instance.new("Frame")
-                                healthBarBg.Size = UDim2.new(1, -50, 0, 6)
-                                healthBarBg.Position = UDim2.new(0, 46, 1, -12)
-                                healthBarBg.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
-                                healthBarBg.BorderSizePixel = 0
-                                healthBarBg.Parent = bgFrame
-                                
-                                local healthBarBgCorner = Instance.new("UICorner")
-                                healthBarBgCorner.CornerRadius = UDim.new(0, 3)
-                                healthBarBgCorner.Parent = healthBarBg
-                                
-                                local healthBar = Instance.new("Frame")
-                                healthBar.Size = UDim2.new(health / maxHealth, 0, 1, 0)
-                                healthBar.Position = UDim2.new(0, 0, 0, 0)
-                                healthBar.BackgroundColor3 = textColor
-                                healthBar.BorderSizePixel = 0
-                                healthBar.Parent = healthBarBg
-                                
-                                local healthBarCorner = Instance.new("UICorner")
-                                healthBarCorner.CornerRadius = UDim.new(0, 3)
-                                healthBarCorner.Parent = healthBar
-                                
-                                table.insert(ESPLabels, billGui)
-                                table.insert(ESPThumbnails, avatarFrame)
-                            end
-                        end
-                    end
-                end
+
+-- ============================================
+-- MINIMIZE TOGGLE SYSTEM
+-- ============================================
+
+-- Toggle Button (Purple Circle)
+UI.ToggleBtn = CreateInstance("Frame", {
+    Name = "ToggleBtn",
+    Size = UDim2.new(0, CONFIG.ToggleSize, 0, CONFIG.ToggleSize),
+    Position = UDim2.new(0, 0, 0, 0),
+    BackgroundColor3 = CONFIG.NeonPurple,
+    Visible = false,
+    Parent = UI.ScreenGui
+})
+CreateInstance("UICorner", {
+    CornerRadius = UDim.new(1, 0),
+    Parent = UI.ToggleBtn
+})
+CreateUIStroke(Color3.fromRGB(255, 255, 255), 2, 0).Parent = UI.ToggleBtn
+CreateTextLabel(
+    UDim2.new(1, 0, 1, 0),
+    UDim2.new(0, 0, 0, 0),
+    "⚙",
+    CONFIG.TextColor,
+    18,
+    UI.ToggleBtn
+)
+
+-- Draggable Toggle Logic
+local draggingToggle = false
+local toggleDragOffset = Vector2.new()
+
+UI.ToggleBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+       input.UserInputType == Enum.UserInputType.Touch then
+        draggingToggle = true
+        toggleDragOffset = UI.ToggleBtn.AbsolutePosition - input.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                draggingToggle = false
             end
         end)
     end
-end
--- ===========================================================================
--- SWORD DEALER ESP SYSTEM
--- ===========================================================================
-local function CleanupSwordDealerESP()
-    for _, label in ipairs(ESPLabels) do
-        if label and label.Parent then
-            label:Destroy()
-        end
-    end
-    for _, tracer in ipairs(TracerLines) do
-        if tracer and tracer.Parent then
-            tracer:Destroy()
-        end
-    end
-    if DealerAlert and DealerAlert.Parent then
-        DealerAlert:Destroy()
-        DealerAlert = nil
-    end
-    ESPLabels = {}
-    TracerLines = {}
-end
-local function CreateTracer(targetPart, color)
-    local tracer = TracerLines[targetPart]
-    local tracerColor = color or Colors.Purple
-    
-    if not tracer then
-        local line = Instance.new("Beam")
-        line.Color = ColorSequence.new(tracerColor)
-        line.Transparency = NumberSequence.new(0.3, 0.7)
-        line.Width = 0.5
-        line.Parent = targetPart
-        TracerLines[targetPart] = line
-    end
-    
-    return tracer
-end
-local function SwordDealerESPLoop()
-    while true do
-        task.wait(0.2)
-        
-        SafeCall(function()
-            if Features.SwordDealerESP then
-                local dealerFound = false
-                
-                for _, npc in ipairs(Workspace:GetDescendants()) do
-                    if (npc.Name:find("Legendary") and npc.Name:find("Sword")) or 
-                       npc.Name:find("Sword Dealer") or 
-                       npc.Name:find("Legendary Sword") then
-                        dealerFound = true
-                        local hrp = npc:FindFirstChild("HumanoidRootPart") or npc:FindFirstChildWhichIsA("BasePart")
-                        
-                        if hrp then
-                            local onScreen, screenPos = Camera:WorldToViewportPoint(hrp.Position)
-                            local dist = GetDistance(HumanoidRootPart, hrp)
-                            
-                            if onScreen and screenPos.Z > 0 then
-                                local label = ESPLabels["SwordDealer"]
-                                
-                                if not label then
-                                    label = Instance.new("TextLabel")
-                                    label.Name = "SwordDealer"
-                                    label.Size = UDim2.new(0, 200, 0, 45)
-                                    label.BackgroundTransparency = 1
-                                    label.TextColor3 = Colors.Purple
-                                    label.TextStrokeTransparency = 0
-                                    label.Font = Enum.Font.GothamBold
-                                    label.TextSize = 15
-                                    label.TextXAlignment = Enum.TextXAlignment.Left
-                                    label.ZIndex = 10
-                                    label.Parent = Camera
-                                    ESPLabels["SwordDealer"] = label
-                                end
-                                
-                                label.Position = UDim2.new(0, screenPos.X - 100, 0, screenPos.Y - 55)
-                                label.Text = "⚔️ LEGENDARY SWORD DEALER\n" .. string.format("%.0f m", dist)
-                                
-                                CreateTracer(hrp, Colors.Purple)
-                            end
-                        end
-                    end
-                end
-                
-                if dealerFound then
-                    if not DealerAlert then
-                        DealerAlert = Instance.new("TextLabel")
-                        DealerAlert.Size = UDim2.new(0, 450, 0, 90)
-                        DealerAlert.Position = UDim2.new(0.5, -225, 0.2, 0)
-                        DealerAlert.BackgroundColor3 = Colors.Purple
-                        DealerAlert.BackgroundTransparency = 0.3
-                        DealerAlert.Text = "⚔️ SWORD DEALER SPAWNED! ⚔️"
-                        DealerAlert.TextColor3 = Colors.Text
-                        DealerAlert.TextStrokeTransparency = 0
-                        DealerAlert.Font = Enum.Font.GothamBold
-                        DealerAlert.TextSize = 32
-                        DealerAlert.TextYAlignment = Enum.TextYAlignment.Top
-                        DealerAlert.ZIndex = 100
-                        DealerAlert.Parent = Camera
-                        
-                        local alertCorner = Instance.new("UICorner")
-                        alertCorner.CornerRadius = UDim.new(0, 12)
-                        alertCorner.Parent = DealerAlert
-                        
-                        task.delay(10, function()
-                            if DealerAlert and DealerAlert.Parent then
-                                DealerAlert:Destroy()
-                                DealerAlert = nil
-                            end
-                        end)
-                    end
-                else
-                    if DealerAlert and DealerAlert.Parent then
-                        DealerAlert:Destroy()
-                        DealerAlert = nil
-                    end
-                end
-            else
-                CleanupSwordDealerESP()
-            end
-        end)
-    end
-end
--- ===========================================================================
--- DEVIL FRUIT ESP SYSTEM
--- ===========================================================================
-local function CleanupFruitESP()
-    for _, label in ipairs(ESPLabels) do
-        if label and label.Parent then
-            label:Destroy()
-        end
-    end
-    for _, box in ipairs(SelectionBoxes) do
-        if box and box.Parent then
-            box:Destroy()
-        end
-    end
-    ESPLabels = {}
-    SelectionBoxes = {}
-end
-local function CreateFruitESPLabel(part, labelText, labelColor)
-    local label = ESPLabels[part]
-    
-    if not label then
-        label = Instance.new("BillboardGui")
-        label.Size = UDim2.new(0, 160, 0, 45)
-        label.StudsOffset = Vector3.new(0, 3, 0)
-        label.AlwaysOnTop = true
-        label.Parent = part
-        
-        local bgFrame = Instance.new("Frame")
-        bgFrame.Size = UDim2.new(1, 0, 1, 0)
-        bgFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-        bgFrame.BackgroundTransparency = 0.75
-        bgFrame.BorderSizePixel = 0
-        bgFrame.Parent = label
-        
-        local bgCorner = Instance.new("UICorner")
-        bgCorner.CornerRadius = UDim.new(0, 8)
-        bgCorner.Parent = bgFrame
-        
-        local textLabel = Instance.new("TextLabel")
-        textLabel.Name = "TextLabel"
-        textLabel.Size = UDim2.new(1, 0, 1, 0)
-        textLabel.BackgroundTransparency = 1
-        textLabel.TextColor3 = labelColor or Colors.Text
-        textLabel.TextStrokeTransparency = 0
-        textLabel.Font = Enum.Font.GothamBold
-        textLabel.TextSize = 14
-        textLabel.TextXAlignment = Enum.TextXAlignment.Center
-        textLabel.Parent = bgFrame
-        
-        ESPLabels[part] = label
-        return textLabel
-    end
-    
-    local textLabel = label:FindFirstChild("TextLabel")
-    if textLabel then
-        return textLabel
-    end
-    return nil
-end
-local function CreateSelectionBox(part, color)
-    local box = SelectionBoxes[part]
-    local boxColor = color or Colors.Gold
-    
-    if not box then
-        local selectionBox = Instance.new("SelectionBox")
-        selectionBox.FaceHandles = false
-        selectionBox.AdaptiveSizeEnabled = true
-        selectionBox.Color3 = boxColor
-        selectionBox.Parent = part
-        SelectionBoxes[part] = selectionBox
-    end
-    
-    return box
-end
-local function FruitESPLoop()
-    while true do
-        task.wait(0.25)
-        
-        SafeCall(function()
-            if Features.FruitESP then
-                CleanupFruitESP()
-                
-                for _, fruit in ipairs(Workspace:GetDescendants()) do
-                    if fruit.Name:find("Blox Fruit") or fruit.Name:find("Devil Fruit") then
-                        local part = fruit:FindFirstChildWhichIsA("BasePart") or fruit
-                        if part then
-                            local dist = GetDistance(HumanoidRootPart, part)
-                            local fruitName = fruit.Name:match("(.+)-") or fruit.Name:match("(.+) ") or "Fruit"
-                            
-                            CreateSelectionBox(part, Colors.Gold)
-                            
-                            local textLabel = CreateFruitESPLabel(part, string.format("🍎 %s\n%.0f m", fruitName, dist), Colors.AccentLight)
-                            if textLabel then
-                                textLabel.Text = string.format("🍎 %s\n%.0f m", fruitName, dist)
-                            end
-                        end
-                    end
-                end
-            else
-                CleanupFruitESP()
-            end
-        end)
-    end
-end
--- ===========================================================================
--- BERRY & HAKI MATERIAL ESP SYSTEM
--- ===========================================================================
-local function CleanupBerryESP()
-    for _, label in ipairs(ESPLabels) do
-        if label and label.Parent then
-            label:Destroy()
-        end
-    end
-    for _, box in ipairs(SelectionBoxes) do
-        if box and box.Parent then
-            box:Destroy()
-        end
-    end
-    ESPLabels = {}
-    SelectionBoxes = {}
-end
-local function BerryESPLoop()
-    while true do
-        task.wait(0.25)
-        
-        SafeCall(function()
-            if Features.BerryESP then
-                CleanupBerryESP()
-                
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    local isBerry = obj.Name:find("Berry") or obj.Name:find("Haki") or obj.Name:find("Material")
-                    local isChest = obj.Name:find("Chest") or obj.Name:find("Treasure")
-                    
-                    if isBerry or isChest then
-                        local part = obj:FindFirstChildWhichIsA("BasePart") or obj
-                        if part then
-                            local dist = GetDistance(HumanoidRootPart, part)
-                            
-                            CreateSelectionBox(part, Colors.Ally)
-                            
-                            local textLabel = CreateFruitESPLabel(part, string.format("🌟 RESOURCE MATERIAL\n%.0f m", dist), Colors.Ally)
-                            if textLabel then
-                                textLabel.Text = string.format("🌟 RESOURCE MATERIAL\n%.0f m", dist)
-                            end
-                        end
-                    end
-                end
-            else
-                CleanupBerryESP()
-            end
-        end)
-    end
-end
--- ===========================================================================
--- CHEST ESP SYSTEM
--- ===========================================================================
-local function CleanupChestESP()
-    for _, label in ipairs(ESPLabels) do
-        if label and label.Parent then
-            label:Destroy()
-        end
-    end
-    for _, box in ipairs(SelectionBoxes) do
-        if box and box.Parent then
-            box:Destroy()
-        end
-    end
-    ESPLabels = {}
-    SelectionBoxes = {}
-end
-local function ChestESPLoop()
-    while true do
-        task.wait(0.25)
-        
-        SafeCall(function()
-            if Features.ChestESP then
-                CleanupChestESP()
-                
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    local isChest = obj.Name:find("Chest") or obj.Name:find("Gold") or obj.Name:find("Silver") or obj.Name:find("Diamond")
-                    
-                    if isChest then
-                        local part = obj:FindFirstChildWhichIsA("BasePart") or obj
-                        if part then
-                            local dist = GetDistance(HumanoidRootPart, part)
-                            local chestType = "Chest"
-                            
-                            if obj.Name:find("Gold") then
-                                chestType = "Gold Chest"
-                            elseif obj.Name:find("Silver") then
-                                chestType = "Silver Chest"
-                            elseif obj.Name:find("Diamond") then
-                                chestType = "Diamond Chest"
-                            end
-                            
-                            CreateSelectionBox(part, Colors.Gold)
-                            
-                            local textLabel = CreateFruitESPLabel(part, string.format("📦 %s\n%.0f m", chestType, dist), Colors.Gold)
-                            if textLabel then
-                                textLabel.Text = string.format("📦 %s\n%.0f m", chestType, dist)
-                            end
-                        end
-                    end
-                end
-            else
-                CleanupChestESP()
-            end
-        end)
-    end
-end
--- ===========================================================================
--- MAIN INITIALIZATION
--- ===========================================================================
-local function InitializeUI()
-    local screenGui = CreateScreenGui()
-    local mainFrame = CreateMainFrame(screenGui)
-    local header, closeBtn = CreateHeader(mainFrame)
-    local scrollFrame = CreateScrollingFrame(mainFrame)
-    local toggleButton = CreateToggleButton(screenGui)
-    
-    -- Create toggle switches
-    CreateToggleSwitch(scrollFrame, "👤 Player ESP", 0)
-    CreateToggleSwitch(scrollFrame, "⚔️ Sword Dealer ESP", 60)
-    CreateToggleSwitch(scrollFrame, "🍎 Devil Fruit ESP", 120)
-    CreateToggleSwitch(scrollFrame, "🌟 Berry & Haki ESP", 180)
-    CreateToggleSwitch(scrollFrame, "📦 Chest ESP", 240)
-    
-    -- Close button logic
-    closeBtn.MouseButton1Click:Connect(function()
-        mainFrame.Visible = false
-        toggleButton.Visible = true
-    end)
-    
-    -- Toggle button logic
-    toggleButton.MouseButton1Click:Connect(function()
-        mainFrame.Visible = true
-        toggleButton.Visible = false
-    end)
-    
-    -- Make toggle button draggable
-    local isDragging = false
-    local dragStartX, dragStartY = 0, 0
-    local initialLeft, initialTop = 0, 0
-    
-    toggleButton.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            isDragging = true
-            dragStartX = input.Position.X
-            dragStartY = input.Position.Y
-            initialLeft = toggleButton.Position.X.Offset
-            initialTop = toggleButton.Position.Y.Offset
-        end
-    end)
-    
-    toggleButton.InputChanged:Connect(function(input)
-        if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            toggleButton.Position = UDim2.new(0, input.Position.X - 20, 0, input.Position.Y - 20)
-        end
-    end)
-    
-    toggleButton.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            isDragging = false
-        end
-    end)
-    
-    return screenGui, mainFrame, toggleButton
-end
--- ===========================================================================
--- CHARACTER RELOAD HANDLER
--- ===========================================================================
-LocalPlayer.CharacterAdded:Connect(function(newCharacter)
-    Character = newCharacter
-    Humanoid = Character:WaitForChild("Humanoid")
-    HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
-    
-    print(string.format("[%s] Character loaded", SCRIPT_NAME))
 end)
--- ===========================================================================
--- START ALL SYSTEMS
--- ===========================================================================
--- Initialize UI
-local screenGui, mainFrame, toggleButton = InitializeUI()
--- Start all ESP loops
-coroutine.wrap(function()
-    PlayerESPLoop()
-end)()
-coroutine.wrap(function()
-    SwordDealerESPLoop()
-end)()
-coroutine.wrap(function()
-    FruitESPLoop()
-end)()
-coroutine.wrap(function()
-    BerryESPLoop()
-end)()
-coroutine.wrap(function()
-    ChestESPLoop()
-end)()
--- ===========================================================================
--- STARTUP MESSAGE
--- ===========================================================================
-print("")
-print("╔════════════════════════════════════════════╗")
-print("║    BLOX FRUITS ESP HUB                     ║")
-print("║    v" .. SCRIPT_VERSION .. "                              ║")
-print("╠════════════════════════════════════════════╣")
-print("║  ESP Features Loaded:                      ║")
-print("║    ✓ Player ESP (Name, Distance, Fruit)    ║")
-print("║    ✓ Avatar Thumbnails                     ║")
-print("║    ✓ Team-Based Color System               ║")
-print("║    ✓ Legendary Sword Dealer ESP            ║")
-print("║    ✓ Devil Fruit ESP (Box + Label)         ║")
-print("║    ✓ Berry & Haki Material ESP             ║")
-print("║    ✓ Chest ESP (Gold/Silver/Diamond)       ║")
-print("╠════════════════════════════════════════════╣")
-print("║  All features wrapped in pcall!            ║")
-print("║  Click ⚙️ to minimize, click again to open ║")
-print("╚════════════════════════════════════════════╝")
-print("")
+
+UserInputService.InputChanged:Connect(function(input)
+    if draggingToggle and 
+       (input.UserInputType == Enum.UserInputType.MouseMovement or 
+        input.UserInputType == Enum.UserInputType.Touch) then
+        local newPosition = input.Position + toggleDragOffset
+        UI.ToggleBtn.Position = UDim2.fromOffset(newPosition.X, newPosition.Y)
+    end
+end)
+
+-- Toggle Button Click - Restore Main Menu
+UI.ToggleBtn.MouseButton1Click:Connect(function()
+    UI.MainFrame.Visible = true
+    UI.ToggleBtn.Visible = false
+    
+    -- Animate main frame appearance
+    UI.MainFrame.BackgroundTransparency = 1
+    TweenObject(UI.MainFrame, {BackgroundTransparency = 0}, 0.3)
+end)
+
+-- Minimize Button Click - Hide Main Menu
+UI.MinimizeBtn.MouseButton1Click:Connect(function()
+    UI.MainFrame.Visible = false
+    UI.ToggleBtn.Visible = true
+    
+    -- Position toggle button at bottom-right corner
+    local screenGuiSize = UI.ScreenGui.AbsoluteWindowSize
+    UI.ToggleBtn.Position = UDim2.fromOffset(
+        screenGuiSize.X - CONFIG.ToggleSize - 10,
+        screenGuiSize.Y - CONFIG.ToggleSize - 10
+    )
+end)
+
+-- ============================================
+-- TAB SWITCHING LOGIC
+-- ============================================
+
+local function SwitchTab(tabIndex)
+    if tabIndex < 1 or tabIndex > 4 then return end
+    
+    -- Hide all tab frames
+    for i = 1, 4 do
+        UI.TabFrames[i].Frame.Visible = (i == tabIndex)
+    end
+    
+    -- Update tab button colors
+    for i, tabData in ipairs(UI.TabButtons) do
+        local targetColor = (i == tabIndex) and CONFIG.NeonPurple or CONFIG.ButtonColor
+        TweenObject(tabData.Button, {BackgroundColor3 = targetColor}, 0.2)
+    end
+    
+    ActiveTab = tabIndex
+end
+
+-- Connect tab button clicks
+for i, tabData in ipairs(UI.TabButtons) do
+    tabData.Button.MouseButton1Click:Connect(function()
+        SwitchTab(i)
+    end)
+end
+
+-- ============================================
+-- MAIN FRAME DRAGGABLE SYSTEM
+-- ============================================
+
+local draggingMain = false
+local mainDragOffset = Vector2.new()
+local mainFrameDragging = false
+
+UI.TitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+       input.UserInputType == Enum.UserInputType.Touch then
+        mainFrameDragging = true
+        draggingMain = true
+        mainDragOffset = UI.MainFrame.AbsolutePosition - input.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                draggingMain = false
+            end
+        end)
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if draggingMain and mainFrameDragging and
+       (input.UserInputType == Enum.UserInputType.MouseMovement or 
+        input.UserInputType == Enum.UserInputType.Touch) then
+        local newPosition = input.Position + mainDragOffset
+        UI.MainFrame.Position = UDim2.fromOffset(newPosition.X, newPosition.Y)
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+       input.UserInputType == Enum.UserInputType.Touch then
+        mainFrameDragging = false
+    end
+end)
+
+-- ============================================
+-- HELPER FUNCTIONS FOR CONTENT POPULATION
+-- ============================================
+
+-- Create Button in Column
+function UI.CreateButton(column, text, callback)
+    local buttonFrame = CreateInstance("Frame", {
+        Name = "Button_" .. text:gsub("%s+", "_"),
+        Size = UDim2.new(1, -10, 0, 35),
+        BackgroundTransparency = 1,
+        Parent = column
+    })
+    
+    local button = CreateButton(
+        UDim2.new(1, 0, 1, 0),
+        UDim2.new(0, 0, 0, 0),
+        CONFIG.ButtonColor,
+        buttonFrame
+    )
+    CreateInstance("UICorner", {
+        CornerRadius = UDim.new(0, 6),
+        Parent = button
+    })
+    CreateTextLabel(
+        UDim2.new(1, 0, 1, 0),
+        UDim2.new(0, 0, 0, 0),
+        text,
+        CONFIG.TextColor,
+        13,
+        button
+    )
+    
+    -- Hover effect
+    button.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            TweenObject(button, {BackgroundColor3 = CONFIG.ButtonHover}, 0.2)
+        end
+    end)
+    
+    button.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            TweenObject(button, {BackgroundColor3 = CONFIG.ButtonColor}, 0.2)
+        end
+    end)
+    
+    -- Click event
+    button.MouseButton1Click:Connect(function()
+        if callback then callback() end
+    end)
+    
+    return buttonFrame
+end
+
+-- Create Toggle Button (On/Off)
+function UI.CreateToggle(column, text, defaultState, callback)
+    local toggleFrame = CreateInstance("Frame", {
+        Name = "Toggle_" .. text:gsub("%s+", "_"),
+        Size = UDim2.new(1, -10, 0, 40),
+        BackgroundTransparency = 1,
+        Parent = column
+    })
+    
+    local toggleBg = CreateButton(
+        UDim2.new(1, 0, 1, 0),
+        UDim2.new(0, 0, 0, 0),
+        CONFIG.ButtonColor,
+        toggleFrame
+    )
+    CreateInstance("UICorner", {
+        CornerRadius = UDim.new(0, 6),
+        Parent = toggleBg
+    })
+    
+    local toggleLabel = CreateTextLabel(
+        UDim2.new(0, 100, 1, 0),
+        UDim2.new(0, 10, 0, 0),
+        text,
+        CONFIG.TextColor,
+        13,
+        toggleFrame
+    )
+    toggleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    
+    -- Toggle Switch
+    local isOn = defaultState or false
+    local switchBg = CreateInstance("Frame", {
+        Name = "SwitchBg",
+        Size = UDim2.new(0, 40, 0, 20),
+        Position = UDim2.new(1, -50, 0.5, -10),
+        BackgroundColor3 = Color3.fromRGB(40, 40, 50),
+        Parent = toggleBg
+    })
+    CreateInstance("UICorner", {
+        CornerRadius = UDim.new(1, 0),
+        Parent = switchBg
+    })
+    
+    local switchDot = CreateInstance("Frame", {
+        Name = "SwitchDot",
+        Size = UDim2.new(0, 16, 0, 16),
+        Position = UDim2.new(0, 2, 0.5, -8),
+        BackgroundColor3 = CONFIG.TextColor,
+        Parent = switchBg
+    })
+    CreateInstance("UICorner", {
+        CornerRadius = UDim.new(1, 0),
+        Parent = switchDot
+    })
+    
+    -- Update switch position based on state
+    local function UpdateSwitch()
+        if isOn then
+            TweenObject(switchBg, {BackgroundColor3 = CONFIG.NeonPurple}, 0.2)
+            TweenObject(switchDot, {Position = UDim2.new(0, 22, 0.5, -8)}, 0.2)
+        else
+            TweenObject(switchBg, {BackgroundColor3 = Color3.fromRGB(40, 40, 50)}, 0.2)
+            TweenObject(switchDot, {Position = UDim2.new(0, 2, 0.5, -8)}, 0.2)
+        end
+    end
+    
+    UpdateSwitch()
+    
+    toggleBg.MouseButton1Click:Connect(function()
+        isOn = not isOn
+        UpdateSwitch()
+        if callback then callback(isOn) end
+    end)
+    
+    return {Frame = toggleFrame, GetState = function() return isOn end}
+end
+
+-- Create Slider
+function UI.CreateSlider(column, text, minValue, maxValue, defaultValue, callback)
+    local sliderFrame = CreateInstance("Frame", {
+        Name = "Slider_" .. text:gsub("%s+", "_"),
+        Size = UDim2.new(1, -10, 0, 50),
+        BackgroundTransparency = 1,
+        Parent = column
+    })
+    
+    local sliderBg = CreateButton(
+        UDim2.new(1, 0, 1, 0),
+        UDim2.new(0, 0, 0, 0),
+        CONFIG.ButtonColor,
+        sliderFrame
+    )
+    CreateInstance("UICorner", {
+        CornerRadius = UDim.new(0, 6),
+        Parent = sliderBg
+    })
+    
+    local sliderLabel = CreateTextLabel(
+        UDim2.new(1, 0, 0, 10),
+        UDim2.new(0, 10, 0, 0),
+        text,
+        CONFIG.TextColor,
+        13,
+        sliderFrame
+    )
+    sliderLabel.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local valueLabel = CreateTextLabel(
+        UDim2.new(0, 40, 0, 15),
+        UDim2.new(1, -50, 0, 10),
+        tostring(defaultValue),
+        CONFIG.NeonPurple,
+        13,
+        sliderFrame
+    )
+    
+    -- Slider Track
+    local trackBg = CreateInstance("Frame", {
+        Name = "TrackBg",
+        Size = UDim2.new(1, -30, 0, 4),
+        Position = UDim2.new(0, 15, 1, -20),
+        BackgroundColor3 = Color3.fromRGB(40, 40, 50),
+        Parent = sliderFrame
+    })
+    CreateInstance("UICorner", {
+        CornerRadius = UDim.new(1, 0),
+        Parent = trackBg
+    })
+    
+    local trackFill = CreateInstance("Frame", {
+        Name = "TrackFill",
+        Size = UDim2.new((defaultValue - minValue) / (maxValue - minValue), -4, 0, 4),
+        Position = UDim2.new(0, 2, 0, 0),
+        BackgroundColor3 = CONFIG.NeonPurple,
+        Parent = trackBg
+    })
+    CreateInstance("UICorner", {
+        CornerRadius = UDim.new(1, 0),
+        Parent = trackFill
+    })
+    
+    local trackDot = CreateInstance("Frame", {
+        Name = "TrackDot",
+        Size = UDim2.new(0, 14, 0, 14),
+        Position = UDim2.new((defaultValue - minValue) / (maxValue - minValue), -5, 0.5, -7),
+        BackgroundColor3 = CONFIG.TextColor,
+        Parent = trackBg
+    })
+    CreateInstance("UICorner", {
+        CornerRadius = UDim.new(1, 0),
+        Parent = trackDot
+    })
+    
+    local draggingSlider = false
+    
+    local function UpdateSlider(position)
+        local relativePos = math.clamp((position - trackBg.AbsolutePosition.X) / trackBg.AbsoluteSize.X, 0, 1)
+        local value = math.floor(minValue + (relativePos * (maxValue - minValue)))
+        value = math.clamp(value, minValue, maxValue)
+        
+        local fillPercent = (value - minValue) / (maxValue - minValue)
+        TweenObject(trackFill, {Size = UDim2.new(fillPercent, -4, 0, 4)}, 0.1)
+        TweenObject(trackDot, {Position = UDim2.new(fillPercent, -5, 0.5, -7)}, 0.1)
+        valueLabel.Text = tostring(value)
+        
+        if callback then callback(value) end
+    end
+    
+    trackBg.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+           input.UserInputType == Enum.UserInputType.Touch then
+            draggingSlider = true
+            UpdateSlider(input.Position.X)
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if draggingSlider and
+           (input.UserInputType == Enum.UserInputType.MouseMovement or 
+            input.UserInputType == Enum.UserInputType.Touch) then
+            UpdateSlider(input.Position.X)
+        end
+    end)
+    
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+           input.UserInputType == Enum.UserInputType.Touch then
+            draggingSlider = false
+        end
+    end)
+    
+    return {Frame = sliderFrame, GetValue = function() return tonumber(valueLabel.Text) end}
+end
+
+-- Create Dropdown
+function UI.CreateDropdown(column, text, options, defaultIndex, callback)
+    local dropdownFrame = CreateInstance("Frame", {
+        Name = "Dropdown_" .. text:gsub("%s+", "_"),
+        Size = UDim2.new(1, -10, 0, 40),
+        BackgroundTransparency = 1,
+        Parent = column
+    })
+    
+    local dropdownBg = CreateButton(
+        UDim2.new(1, 0, 1, 0),
+        UDim2.new(0, 0, 0, 0),
+        CONFIG.ButtonColor,
+        dropdownFrame
+    )
+    CreateInstance("UICorner", {
+        CornerRadius = UDim.new(0, 6),
+        Parent = dropdownBg
+    })
+    
+    local dropdownLabel = CreateTextLabel(
+        UDim2.new(0, 100, 1, 0),
+        UDim2.new(0, 10, 0, 0),
+        text,
+        CONFIG.TextColor,
+        13,
+        dropdownFrame
+    )
+    dropdownLabel.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local currentValue = options[defaultIndex or 1] or "Select"
+    local valueLabel = CreateTextLabel(
+        UDim2.new(1, -30, 1, 0),
+        UDim2.new(0, 110, 0, 0),
+        currentValue,
+        CONFIG.NeonPurple,
+        13,
+        dropdownFrame
+    )
+    valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+    
+    local arrowLabel = CreateTextLabel(
+        UDim2.new(0, 20, 1, 0),
+        UDim2.new(1, -20, 0, 0),
+        "▼",
+        CONFIG.TextColor,
+        12,
+        dropdownFrame
+    )
+    
+    -- Dropdown Menu Container
+    local menuContainer = CreateInstance("Frame", {
+        Name = "MenuContainer",
+        Size = UDim2.new(1, 0, 0, 0),
+        Position = UDim2.new(0, 0, 1, 0),
+        BackgroundColor3 = CONFIG.ButtonColor,
+        Visible = false,
+        ClipsDescendants = true,
+        Parent = dropdownBg
+    })
+    CreateInstance("UICorner", {
+        CornerRadius = UDim.new(0, 6),
+        Parent = menuContainer
+    })
+    
+    local menuScroll = CreateInstance("ScrollingFrame", {
+        Name = "MenuScroll",
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        ScrollBarThickness = 4,
+        ScrollBarImageColor3 = CONFIG.NeonPurple,
+        Parent = menuContainer
+    })
+    CreateInstance("UIListLayout", {
+        Padding = UDim.new(0, 2),
+        Parent = menuScroll
+    })
+    
+    local isOpen = false
+    
+    local function UpdateMenuHeight()
+        local optionCount = #options
+        local height = math.min(optionCount * 30, 150)
+        menuContainer.Size = UDim2.new(1, 0, 0, height)
+        menuScroll.CanvasSize = UDim2.new(0, 0, 0, optionCount * 30)
+    end
+    
+    local function CreateOption(optionText, index)
+        local optionFrame = CreateInstance("Frame", {
+            Name = "Option_" .. index,
+            Size = UDim2.new(1, 0, 0, 30),
+            BackgroundTransparency = 1,
+            Parent = menuScroll
+        })
+        
+        local optionBtn = CreateButton(
+            UDim2.new(1, -4, 1, 0),
+            UDim2.new(0, 2, 0, 0),
+            Color3.fromRGB(25, 25, 35),
+            optionFrame
+        )
+        CreateInstance("UICorner", {
+            CornerRadius = UDim.new(0, 4),
+            Parent = optionBtn
+        })
+        CreateTextLabel(
+            UDim2.new(1, 0, 1, 0),
+            UDim2.new(0, 0, 0, 0),
+            optionText,
+            CONFIG.TextColor,
+            12,
+            optionBtn
+        )
+        
+        optionBtn.MouseButton1Click:Connect(function()
+            currentValue = optionText
+            valueLabel.Text = currentValue
+            arrowLabel.Text = "▼"
+            menuContainer.Visible = false
+            isOpen = false
+            if callback then callback(index, optionText) end
+        end)
+    end
+    
+    for i, option in ipairs(options) do
+        CreateOption(option, i)
+    end
+    
+    UpdateMenuHeight()
+    
+    dropdownBg.MouseButton1Click:Connect(function()
+        isOpen = not isOpen
+        menuContainer.Visible = isOpen
+        arrowLabel.Text = isOpen and "▲" or "▼"
+    end)
+    
+    return {Frame = dropdownFrame, GetValue = function() return currentValue end}
+end
+
+-- Create Label/Text Display
+function UI.CreateLabel(column, text, textColor)
+    local labelFrame = CreateInstance("Frame", {
+        Name = "Label_" .. text:gsub("%s+", "_"),
+        Size = UDim2.new(1, -10, 0, 25),
+        BackgroundTransparency = 1,
+        Parent = column
+    })
+    
+    CreateTextLabel(
+        UDim2.new(1, 0, 1, 0),
+        UDim2.new(0, 0, 0, 0),
+        text,
+        textColor or CONFIG.SecondaryText,
+        12,
+        labelFrame
+    )
+    
+    return labelFrame
+end
+
+-- Create Section Header
+function UI.CreateSection(column, title)
+    local sectionFrame = CreateInstance("Frame", {
+        Name = "Section_" .. title:gsub("%s+", "_"),
+        Size = UDim2.new(1, -10, 0, 30),
+        BackgroundTransparency = 1,
+        Parent = column
+    })
+    
+    local sectionBg = CreateButton(
+        UDim2.new(1, 0, 1, 0),
+        UDim2.new(0, 0, 0, 0),
+        Color3.fromRGB(15, 15, 25),
+        sectionFrame
+    )
+    CreateInstance("UICorner", {
+        CornerRadius = UDim.new(0, 4),
+        Parent = sectionBg
+    })
+    CreateUIStroke(CONFIG.NeonPurple, 1, 0.3).Parent = sectionBg
+    
+    CreateTextLabel(
+        UDim2.new(1, 0, 1, 0),
+        UDim2.new(0, 0, 0, 0),
+        "▸ " .. title,
+        CONFIG.NeonPurple,
+        13,
+        sectionBg
+    )
+    
+    return sectionFrame
+end
+
+-- ============================================
+-- AUTO-UPDATE SCROLLINGFRAME CANVAS SIZE
+-- ============================================
+
+for i = 1, 4 do
+    local leftLayout = UI.TabFrames[i].LeftColumn:FindFirstChildOfClass("UIListLayout")
+    local rightLayout = UI.TabFrames[i].RightColumn:FindFirstChildOfClass("UIListLayout")
+    
+    if leftLayout then
+        leftLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            UI.TabFrames[i].LeftColumn.CanvasSize = UDim2.new(0, 0, 0, leftLayout.AbsoluteContentSize.Y + 10)
+        end)
+    end
+    
+    if rightLayout then
+        rightLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            UI.TabFrames[i].RightColumn.CanvasSize = UDim2.new(0, 0, 0, rightLayout.AbsoluteContentSize.Y + 10)
+        end)
+    end
+end
+
+-- ============================================
+-- CONSOLE OUTPUT & INITIALIZATION
+-- ============================================
+
+print("═══════════════════════════════════════")
+print("🔮 ONYX MATRIX PROJECTS v1.0")
+print("   Premium Mobile Script Hub Loaded!")
+print("═══════════════════════════════════════")
+print("✅ UI Core Framework Initialized")
+print("✅ Tab Navigation System Active")
+print("✅ Twin Scrolling Columns Ready")
+print("✅ Minimize/Restore System Enabled")
+print("✅ Draggable Toggle Button Active")
+print("═══════════════════════════════════════")
+print("📱 Optimized for Delta Executor (Android)")
+print("💜 Neon Purple Theme Applied")
+print("═══════════════════════════════════════")
+
+-- Export UI Table for external access
+_G.OnyxMatrixUI = UI
+
+print("🔮 UI Access: _G.OnyxMatrixUI")
+print("   Example: _G.OnyxMatrixUI.CreateButton(_G.OnyxMatrixUI.TabFrames[1].LeftColumn, \"Test\", function() print(\"Clicked!\") end)")
+
+-- ============================================
+-- END OF UI CORE FRAMEWORK
+-- ============================================
