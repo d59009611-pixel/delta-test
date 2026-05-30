@@ -1,557 +1,273 @@
---// Сервисы
+--[[
+    ============================================================================
+    INTERNAL DEVELOPMENT HUB v1.0 - UNLIMITED BLOX FRUITS EDITION
+    ============================================================================
+]]
+
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
+local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+local VirtualUser = game:GetService("VirtualUser")
 
---// Локальный игрок
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
+local LocalPlayer = Players.LocalPlayer
 
---// Конфигурация
-local CONFIG = {
-	MainFrameSize = UDim2.new(0, 480, 0, 320),
-	MainFramePos = UDim2.new(0.5, -240, 0.5, -160),
-	PrimaryColor = Color3.fromRGB(170, 0, 255),
-	BackgroundColor = Color3.fromRGB(25, 25, 30),
-	TopBarColor = Color3.fromRGB(30, 30, 38),
-	NavColor = Color3.fromRGB(20, 20, 25),
-	ToggleOff = Color3.fromRGB(80, 80, 80),
-	ToggleOn = Color3.fromRGB(0, 170, 0),
-	TextColor = Color3.fromRGB(240, 240, 240),
-	SubTextColor = Color3.fromRGB(180, 180, 180),
-	StrokeThickness = 2,
-	CornerRadius = 8
+-- Полная база данных всех чит-функций БФ
+_G.FullHubSettings = {
+    SpeedBypass = false,
+    WalkSpeed = 45,
+    DefaultSpeed = 16,
+    AutoAttack = false,
+    EspChests = false,
+    AutoFarmLevel = false,
+    AutoStats = false
 }
 
---// Создание ScreenGui
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "AdminPanel"
-screenGui.ResetOnSpawn = false
-screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-screenGui.Parent = playerGui
-
---// Основной фрейм
-local mainFrame = Instance.new("Frame")
-mainFrame.Name = "MainFrame"
-mainFrame.Size = CONFIG.MainFrameSize
-mainFrame.Position = CONFIG.MainFramePos
-mainFrame.BackgroundColor3 = CONFIG.BackgroundColor
-mainFrame.BorderSizePixel = 0
-mainFrame.ClipsDescendants = true
-mainFrame.Parent = screenGui
-
-local mainCorner = Instance.new("UICorner")
-mainCorner.CornerRadius = UDim.new(0, CONFIG.CornerRadius)
-mainCorner.Parent = mainFrame
-
-local mainStroke = Instance.new("UIStroke")
-mainStroke.Color = CONFIG.PrimaryColor
-mainStroke.Thickness = CONFIG.StrokeThickness
-mainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-mainStroke.Parent = mainFrame
-
---// Верхняя панель
-local topBar = Instance.new("Frame")
-topBar.Name = "TopBar"
-topBar.Size = UDim2.new(1, 0, 0, 40)
-topBar.Position = UDim2.new(0, 0, 0, 0)
-topBar.BackgroundColor3 = CONFIG.TopBarColor
-topBar.BorderSizePixel = 0
-topBar.Parent = mainFrame
-
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Name = "Title"
-titleLabel.Size = UDim2.new(1, -100, 1, 0)
-titleLabel.Position = UDim2.new(0, 15, 0, 0)
-titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "ADMIN PANEL"
-titleLabel.TextColor3 = CONFIG.TextColor
-titleLabel.Font = Enum.Font.GothamBold
-titleLabel.TextSize = 16
-titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-titleLabel.Parent = topBar
-
-local closeButton = Instance.new("TextButton")
-closeButton.Name = "CloseButton"
-closeButton.Size = UDim2.new(0, 30, 0, 30)
-closeButton.Position = UDim2.new(1, -40, 0, 5)
-closeButton.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
-closeButton.Text = "X"
-closeButton.TextColor3 = CONFIG.TextColor
-closeButton.Font = Enum.Font.GothamBold
-closeButton.TextSize = 14
-closeButton.Parent = topBar
-
-local closeCorner = Instance.new("UICorner")
-closeCorner.CornerRadius = UDim.new(0, 6)
-closeCorner.Parent = closeButton
-
---// Навигация (боковое меню)
-local navFrame = Instance.new("Frame")
-navFrame.Name = "NavFrame"
-navFrame.Size = UDim2.new(0, 130, 1, -40)
-navFrame.Position = UDim2.new(0, 0, 0, 40)
-navFrame.BackgroundColor3 = CONFIG.NavColor
-navFrame.BorderSizePixel = 0
-navFrame.Parent = mainFrame
-
-local navCorner = Instance.new("UICorner")
-navCorner.CornerRadius = UDim.new(0, 0)
-navCorner.Parent = navFrame
-
---// Контент-зона
-local contentFrame = Instance.new("Frame")
-contentFrame.Name = "ContentFrame"
-contentFrame.Size = UDim2.new(1, -130, 1, -40)
-contentFrame.Position = UDim2.new(0, 130, 0, 40)
-contentFrame.BackgroundTransparency = 1
-contentFrame.Parent = mainFrame
-
---// Круглая кнопка сворачивания
-local toggleCircle = Instance.new("TextButton")
-toggleCircle.Name = "ToggleCircle"
-toggleCircle.Size = UDim2.new(0, 40, 0, 40)
-toggleCircle.Position = UDim2.new(0, 20, 0, 20)
-toggleCircle.BackgroundColor3 = CONFIG.PrimaryColor
-toggleCircle.Text = "⚙"
-toggleCircle.TextColor3 = CONFIG.TextColor
-toggleCircle.Font = Enum.Font.GothamBold
-toggleCircle.TextSize = 20
-toggleCircle.Visible = false
-toggleCircle.Active = true
-toggleCircle.Parent = screenGui
-
-local circleCorner = Instance.new("UICorner")
-circleCorner.CornerRadius = UDim.new(1, 0)
-circleCorner.Parent = toggleCircle
-
-local circleStroke = Instance.new("UIStroke")
-circleStroke.Color = Color3.fromRGB(200, 100, 255)
-circleStroke.Thickness = 2
-circleStroke.Parent = toggleCircle
-
---// Утилита: создание переключателя (Toggle)
-local function createToggle(parent, labelText, position)
-	local container = Instance.new("Frame")
-	container.Name = labelText .. "Container"
-	container.Size = UDim2.new(1, -20, 0, 50)
-	container.Position = position
-	container.BackgroundTransparency = 1
-	container.Parent = parent
-
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(0.65, 0, 1, 0)
-	label.BackgroundTransparency = 1
-	label.Text = labelText
-	label.TextColor3 = CONFIG.SubTextColor
-	label.Font = Enum.Font.Gotham
-	label.TextSize = 14
-	label.TextXAlignment = Enum.TextXAlignment.Left
-	label.TextTruncate = Enum.TextTruncate.AtEnd
-	label.Parent = container
-
-	local button = Instance.new("TextButton")
-	button.Name = "ToggleButton"
-	button.Size = UDim2.new(0, 60, 0, 28)
-	button.Position = UDim2.new(1, -70, 0.5, -14)
-	button.BackgroundColor3 = CONFIG.ToggleOff
-	button.Text = "OFF"
-	button.TextColor3 = CONFIG.TextColor
-	button.Font = Enum.Font.GothamBold
-	button.TextSize = 12
-	button.AutoButtonColor = true
-	button.Parent = container
-
-	local buttonCorner = Instance.new("UICorner")
-	buttonCorner.CornerRadius = UDim.new(0, 14)
-	buttonCorner.Parent = button
-
-	local state = false
-
-	local function updateVisual()
-		if state then
-			button.BackgroundColor3 = CONFIG.ToggleOn
-			button.Text = "ON"
-		else
-			button.BackgroundColor3 = CONFIG.ToggleOff
-			button.Text = "OFF"
-		end
-	end
-
-	return container, button, function() return state end, function(newState)
-		state = newState
-		updateVisual()
-	end
-end
-
---// Утилита: Drag (перетаскивание)
-local function makeDraggable(frame, handle)
-	local dragging = false
-	local dragInput = nil
-	local dragStart = nil
-	local startPos = nil
-
-	handle.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			dragging = true
-			dragStart = input.Position
-			startPos = frame.Position
-			input.Changed:Connect(function()
-				if input.UserInputState == Enum.UserInputState.End then
-					dragging = false
-					dragInput = nil
-				end
-			end)
-		end
-	end)
-
-	handle.InputChanged:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-			dragInput = input
-		end
-	end)
-
-	UserInputService.InputChanged:Connect(function(input)
-		if input == dragInput and dragging then
-			local delta = input.Position - dragStart
-			frame.Position = UDim2.new(
-				startPos.X.Scale,
-				startPos.X.Offset + delta.X,
-				startPos.Y.Scale,
-				startPos.Y.Offset + delta.Y
-			)
-		end
-	end)
-end
-
---// Система вкладок
-local tabs = {}
-local tabContents = {}
-local tabNames = {"Управление", "Телепорты", "Визуальные эффекты"}
-
-for i, tabName in ipairs(tabNames) do
-	local tabButton = Instance.new("TextButton")
-	tabButton.Name = tabName .. "Tab"
-	tabButton.Size = UDim2.new(1, -10, 0, 34)
-	tabButton.Position = UDim2.new(0, 5, 0, 10 + (i - 1) * 44)
-	tabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-	tabButton.Text = tabName
-	tabButton.TextColor3 = CONFIG.SubTextColor
-	tabButton.Font = Enum.Font.Gotham
-	tabButton.TextSize = 13
-	tabButton.Parent = navFrame
-
-	local tabBtnCorner = Instance.new("UICorner")
-	tabBtnCorner.CornerRadius = UDim.new(0, 6)
-	tabBtnCorner.Parent = tabButton
-
-	local content = Instance.new("Frame")
-	content.Name = tabName .. "Content"
-	content.Size = UDim2.new(1, 0, 1, 0)
-	content.BackgroundTransparency = 1
-	content.Visible = (i == 1)
-	content.Parent = contentFrame
-
-	tabs[tabName] = tabButton
-	tabContents[tabName] = content
-end
-
-local function switchTab(activeName)
-	for name, content in pairs(tabContents) do
-		local isActive = (name == activeName)
-		content.Visible = isActive
-		tabs[name].BackgroundColor3 = isActive and Color3.fromRGB(60, 60, 80) or Color3.fromRGB(40, 40, 50)
-		tabs[name].TextColor3 = isActive and CONFIG.TextColor or CONFIG.SubTextColor
-	end
-end
-
-for name, btn in pairs(tabs) do
-	btn.MouseButton1Click:Connect(function()
-		switchTab(name)
-	end)
-end
-
---// ============================================
---// ВКЛАДКА 1: УПРАВЛЕНИЕ
---// ============================================
-local managementContent = tabContents["Управление"]
-
-local speedContainer, speedBtn, getSpeedState, setSpeedState = createToggle(
-	managementContent,
-	"Скорость бега (45)",
-	UDim2.new(0, 10, 0, 15)
-)
-
-local currentHumanoid = nil
-local function onCharacterAdded(character)
-	currentHumanoid = character:WaitForChild("Humanoid", 5)
-end
-
-if player.Character then
-	onCharacterAdded(player.Character)
-end
-player.CharacterAdded:Connect(onCharacterAdded)
-
-speedBtn.MouseButton1Click:Connect(function()
-	local newState = not getSpeedState()
-	setSpeedState(newState)
-	local success, err = pcall(function()
-		if newState and currentHumanoid then
-			currentHumanoid.WalkSpeed = 45
-		elseif not newState and currentHumanoid then
-			currentHumanoid.WalkSpeed = 16
-		end
-	end)
-	if not success then
-		warn("Speed toggle error: " .. tostring(err))
-	end
+-- Мощный встроенный Анти-АФК (защита от вылета с сервера)
+LocalPlayer.Idled:Connect(function()
+    pcall(function()
+        VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+        task.wait(1)
+        VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+    end)
 end)
 
-RunService.Heartbeat:Connect(function()
-	local success = pcall(function()
-		if getSpeedState() and currentHumanoid then
-			if currentHumanoid.WalkSpeed ~= 45 then
-				currentHumanoid.WalkSpeed = 45
-			end
-		elseif not getSpeedState() and currentHumanoid then
-			if currentHumanoid.WalkSpeed == 45 then
-				currentHumanoid.WalkSpeed = 16
-			end
-		end
-	end)
-	if not success then
-		-- Игнорируем ошибки кадра, чтобы не спамить консоль
-	end
+-- ===========================================================================
+-- UI СОЗДАНИЕ (КОМПАКТНЫЙ НЕОН С ПРОКРУТКОЙ ВСЕХ ФУНКЦИЙ)
+-- ===========================================================================
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "UltimateDevelopmentHub"
+ScreenGui.Parent = CoreGui
+ScreenGui.ResetOnSpawn = false
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 270, 0, 300)
+MainFrame.Position = UDim2.new(0.5, -135, 0.5, -150)
+MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
+MainFrame.Active = true
+MainFrame.Draggable = true -- Панель полностью перетаскивается пальцем!
+MainFrame.Parent = ScreenGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 12)
+MainCorner.Parent = MainFrame
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Color = Color3.fromRGB(150, 50, 255) -- Фиолетовая неоновая рамка
+MainStroke.Thickness = 2
+MainStroke.Parent = MainFrame
+
+-- Шапка
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 38)
+TitleBar.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = MainFrame
+
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 12)
+TitleCorner.Parent = TitleBar
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -40, 1, 0)
+Title.Position = UDim2.new(0, 12, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "🔮 DEV FULL COMPANE v1.0"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 12
+Title.Font = Enum.Font.GothamBold
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = TitleBar
+
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 30, 0, 30)
+CloseButton.Position = UDim2.new(1, -34, 0, 4)
+CloseButton.BackgroundTransparency = 1
+CloseButton.Text = "×"
+CloseButton.TextColor3 = Color3.fromRGB(255, 80, 80)
+CloseButton.TextSize = 24
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.Parent = TitleBar
+
+-- Скролл-контейнер (чтобы поместились абсолютно все функции)
+local ScrollFrame = Instance.new("ScrollingFrame")
+ScrollFrame.Size = UDim2.new(1, -10, 1, -48)
+ScrollFrame.Position = UDim2.new(0, 5, 0, 43)
+ScrollFrame.BackgroundTransparency = 1
+ScrollFrame.BorderSizePixel = 0
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 300) -- Запас под кнопки вниз
+ScrollFrame.ScrollBarThickness = 4
+ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(150, 50, 255)
+ScrollFrame.Parent = MainFrame
+
+-- Фиолетовая круглая кнопка сворачивания (Toggle)
+local ToggleIcon = Instance.new("TextButton")
+ToggleIcon.Size = UDim2.new(0, 45, 0, 45)
+ToggleIcon.Position = UDim2.new(0.05, 0, 0.15, 0)
+ToggleIcon.BackgroundColor3 = Color3.fromRGB(150, 50, 255)
+ToggleIcon.Text = "🔮"
+ToggleIcon.TextSize = 20
+ToggleIcon.Visible = false
+ToggleIcon.Active = true
+ToggleIcon.Draggable = true
+ToggleIcon.Parent = ScreenGui
+
+local IconCorner = Instance.new("UICorner")
+IconCorner.CornerRadius = UDim.new(1, 0)
+IconCorner.Parent = ToggleIcon
+
+CloseButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
+    ToggleIcon.Visible = true
 end)
 
---// ============================================
---// ВКЛАДКА 2: ТЕЛЕПОРТЫ
---// ============================================
-local teleportContent = tabContents["Телепорты"]
+ToggleIcon.MouseButton1Click:Connect(function()
+    MainFrame.Visible = true
+    ToggleIcon.Visible = false
+end)
 
-local inputX = Instance.new("TextBox")
-inputX.Name = "InputX"
-inputX.Size = UDim2.new(0, 90, 0, 32)
-inputX.Position = UDim2.new(0, 10, 0, 15)
-inputX.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-inputX.TextColor3 = CONFIG.TextColor
-inputX.PlaceholderText = "X"
-inputX.Text = ""
-inputX.Font = Enum.Font.Gotham
-inputX.TextSize = 14
-inputX.ClearTextOnFocus = false
-inputX.Parent = teleportContent
+-- ===========================================================================
+-- УНИВЕРСАЛЬНЫЙ КОНСТРУКТОР ТУМБЛЕРОВ
+-- ===========================================================================
+local function CreateUltimateToggle(text, posY, callback)
+    local TglBtn = Instance.new("TextButton")
+    TglBtn.Size = UDim2.new(0.94, 0, 0, 36)
+    TglBtn.Position = UDim2.new(0.03, 0, 0, posY)
+    TglBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+    TglBtn.Text = text .. " [ВЫКЛ]"
+    TglBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
+    TglBtn.TextSize = 10
+    TglBtn.Font = Enum.Font.GothamSemibold
+    TglBtn.Parent = ScrollFrame
 
-local inputY = Instance.new("TextBox")
-inputY.Name = "InputY"
-inputY.Size = UDim2.new(0, 90, 0, 32)
-inputY.Position = UDim2.new(0, 110, 0, 15)
-inputY.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-inputY.TextColor3 = CONFIG.TextColor
-inputY.PlaceholderText = "Y"
-inputY.Text = ""
-inputY.Font = Enum.Font.Gotham
-inputY.TextSize = 14
-inputY.ClearTextOnFocus = false
-inputY.Parent = teleportContent
+    local TglCorner = Instance.new("UICorner")
+    TglCorner.CornerRadius = UDim.new(0, 6)
+    TglCorner.Parent = TglBtn
 
-local inputZ = Instance.new("TextBox")
-inputZ.Name = "InputZ"
-inputZ.Size = UDim2.new(0, 90, 0, 32)
-inputZ.Position = UDim2.new(0, 210, 0, 15)
-inputZ.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-inputZ.TextColor3 = CONFIG.TextColor
-inputZ.PlaceholderText = "Z"
-inputZ.Text = ""
-inputZ.Font = Enum.Font.Gotham
-inputZ.TextSize = 14
-inputZ.ClearTextOnFocus = false
-inputZ.Parent = teleportContent
-
-for _, input in ipairs({inputX, inputY, inputZ}) do
-	local inpCorner = Instance.new("UICorner")
-	inpCorner.CornerRadius = UDim.new(0, 6)
-	inpCorner.Parent = input
+    local state = false
+    TglBtn.MouseButton1Click:Connect(function()
+        state = not state
+        pcall(function()
+            if state then
+                TglBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 100) -- Зеленый (ВКЛ)
+                TglBtn.Text = text .. " [ВКЛЮЧЕНО]"
+                TglBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            else
+                TglBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 35) -- Серый (ВЫКЛ)
+                TglBtn.Text = text .. " [ВЫКЛ]"
+                TglBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
+            end
+            callback(state)
+        end)
+    end)
 end
 
-local teleportButton = Instance.new("TextButton")
-teleportButton.Name = "TeleportButton"
-teleportButton.Size = UDim2.new(0, 140, 0, 34)
-teleportButton.Position = UDim2.new(0, 10, 0, 60)
-teleportButton.BackgroundColor3 = CONFIG.PrimaryColor
-teleportButton.Text = "Телепорт"
-teleportButton.TextColor3 = CONFIG.TextColor
-teleportButton.Font = Enum.Font.GothamBold
-teleportButton.TextSize = 14
-teleportButton.Parent = teleportContent
+-- ===========================================================================
+-- СОЗДАНИЕ КНОПОК И ПРИВЯЗКА РЕАЛЬНОГО ФУНКЦИОНАЛА
+-- ===========================================================================
 
-local tpBtnCorner = Instance.new("UICorner")
-tpBtnCorner.CornerRadius = UDim.new(0, 6)
-tpBtnCorner.Parent = teleportButton
-
-teleportButton.MouseButton1Click:Connect(function()
-	local success, err = pcall(function()
-		local x = tonumber(inputX.Text)
-		local y = tonumber(inputY.Text)
-		local z = tonumber(inputZ.Text)
-
-		if x and y and z then
-			local character = player.Character
-			local hrp = character and character:FindFirstChild("HumanoidRootPart")
-			if hrp then
-				local targetCFrame = CFrame.new(x, y, z)
-				local tweenInfo = TweenInfo.new(
-					1.5,
-					Enum.EasingStyle.Quad,
-					Enum.EasingDirection.Out
-				)
-				local tween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
-				tween:Play()
-			end
-		end
-	end)
-	if not success then
-		warn("Teleport error: " .. tostring(err))
-	end
+-- 1. СУПЕР СКОРОСТЬ
+CreateUltimateToggle("⚡ ОБХОД СКОРОСТИ БЕГА (WalkSpeed 45)", 10, function(state)
+    _G.FullHubSettings.SpeedBypass = state
+    if not state then
+        local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then humanoid.WalkSpeed = _G.FullHubSettings.DefaultSpeed end
+    end
 end)
 
--- Пресетные точки
-local presets = {
-	{"Spawn", Vector3.new(0, 50, 0)},
-	{"Base", Vector3.new(100, 50, 100)},
-	{"Shop", Vector3.new(-100, 50, -100)}
-}
-
-for i, preset in ipairs(presets) do
-	local pName, pPos = preset[1], preset[2]
-	local presetBtn = Instance.new("TextButton")
-	presetBtn.Name = pName .. "Preset"
-	presetBtn.Size = UDim2.new(0, 290, 0, 30)
-	presetBtn.Position = UDim2.new(0, 10, 0, 110 + (i - 1) * 40)
-	presetBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-	presetBtn.Text = pName .. "  " .. tostring(pPos)
-	presetBtn.TextColor3 = CONFIG.SubTextColor
-	presetBtn.Font = Enum.Font.Gotham
-	presetBtn.TextSize = 12
-	presetBtn.Parent = teleportContent
-
-	local pCorner = Instance.new("UICorner")
-	pCorner.CornerRadius = UDim.new(0, 6)
-	pCorner.Parent = presetBtn
-
-	presetBtn.MouseButton1Click:Connect(function()
-		local success, err = pcall(function()
-			local character = player.Character
-			local hrp = character and character:FindFirstChild("HumanoidRootPart")
-			if hrp then
-				local tweenInfo = TweenInfo.new(
-					2,
-					Enum.EasingStyle.Quad,
-					Enum.EasingDirection.Out
-				)
-				local tween = TweenService:Create(hrp, tweenInfo, {CFrame = CFrame.new(pPos)})
-				tween:Play()
-			end
-		end)
-		if not success then
-			warn("Preset teleport error: " .. tostring(err))
-		end
-	end)
-end
-
---// ============================================
---// ВКЛАДКА 3: ВИЗУАЛЬНЫЕ ЭФФЕКТЫ
---// ============================================
-local visualContent = tabContents["Визуальные эффекты"]
-
-local highlightContainer, highlightBtn, getHighlightState, setHighlightState = createToggle(
-	visualContent,
-	"Подсветка важных блоков",
-	UDim2.new(0, 10, 0, 15)
-)
-
-highlightBtn.MouseButton1Click:Connect(function()
-	local newState = not getHighlightState()
-	setHighlightState(newState)
+-- 2. МОЩНЫЙ АВТО-КЛИКЕР
+CreateUltimateToggle("⚔️ АВТО-УДАРЫ (FAST ATTACK 10 CPS)", 55, function(state)
+    _G.FullHubSettings.AutoAttack = state
+    if state then
+        task.spawn(function()
+            while _G.FullHubSettings.AutoAttack do
+                task.wait(0.1)
+                pcall(function()
+                    local character = LocalPlayer.Character
+                    local combat = character:FindFirstChild("Combat") or LocalPlayer.Backpack:FindFirstChild("Combat")
+                    if combat then
+                        combat.Parent = character
+                        VirtualUser:CaptureController()
+                        VirtualUser:ClickButton1(Vector2.new(0,0))
+                    end
+                end)
+            end
+        end)
+    end
 end)
 
-local activeHighlights = {}
-local lastScan = 0
-
-RunService.Heartbeat:Connect(function()
-	local success = pcall(function()
-		if not getHighlightState() then
-			for part, box in pairs(activeHighlights) do
-				if box and box.Parent then
-					box:Destroy()
-				end
-			end
-			activeHighlights = {}
-			return
-		end
-
-		if tick() - lastScan < 0.5 then
-			return
-		end
-		lastScan = tick()
-
-		-- Поиск новых блоков
-		for _, obj in ipairs(Workspace:GetDescendants()) do
-			if obj:IsA("BasePart") and obj.Name == "ImportantBlock" then
-				if not activeHighlights[obj] then
-					local selectionBox = Instance.new("SelectionBox")
-					selectionBox.Name = "AdminHighlightBox"
-					selectionBox.Adornee = obj
-					selectionBox.Color3 = Color3.fromRGB(255, 255, 0)
-					selectionBox.LineThickness = 0.05
-					selectionBox.Parent = obj
-					activeHighlights[obj] = selectionBox
-				end
-			end
-		end
-
-		-- Очистка удалённых блоков
-		for part, box in pairs(activeHighlights) do
-			if not part:IsDescendantOf(Workspace) then
-				if box and box.Parent then
-					box:Destroy()
-				end
-				activeHighlights[part] = nil
-			end
-		end
-	end)
-
-	if not success then
-		-- Тихий сброс при ошибке
-		for part, box in pairs(activeHighlights) do
-			if box and box.Parent then
-				box:Destroy()
-			end
-		end
-		activeHighlights = {}
-	end
+-- 3. АВТО-ФАРМ LEVEL (Полет над головами мобов)
+CreateUltimateToggle("🌾 ПОЛНЫЙ АВТО-ФАРМ УРОВНЯ (LEVELING)", 100, function(state)
+    _G.FullHubSettings.AutoFarmLevel = state
+    if state then
+        task.spawn(function()
+            while _G.FullHubSettings.AutoFarmLevel do
+                task.wait(0.5)
+                pcall(function()
+                    local character = LocalPlayer.Character
+                    local enemies = workspace:FindFirstChild("Enemies")
+                    if enemies and character and character:FindFirstChild("HumanoidRootPart") then
+                        for _, enemy in pairs(enemies:GetChildren()) do
+                            local enemyRoot = enemy:FindFirstChild("HumanoidRootPart")
+                            local enemyHum = enemy:FindFirstChild("Humanoid")
+                            if enemyRoot and enemyHum and enemyHum.Health > 0 then
+                                character.HumanoidRootPart.CFrame = enemyRoot.CFrame * CFrame.new(0, 6, 0)
+                                break
+                            end
+                        end
+                    end
+                end)
+            end
+        end)
+    end
 end)
 
---// ============================================
---// СИСТЕМА СВОРАЧИВАНИЯ / РАЗВОРАЧИВАНИЯ
---// ============================================
-closeButton.MouseButton1Click:Connect(function()
-	mainFrame.Visible = false
-	toggleCircle.Visible = true
+-- 4. АВТО-ПРОКАЧКА ХАРАКТЕРИСТИК (Stats)
+CreateUltimateToggle("📈 АВТО-РАСПРЕДЕЛЕНИЕ ОЧКОВ (MELEE)", 145, function(state)
+    _G.FullHubSettings.AutoStats = state
+    if state then
+        task.spawn(function()
+            while _G.FullHubSettings.AutoStats do
+                task.wait(1)
+                pcall(function()
+                    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("AddPoint", "Melee", 1)
+                end)
+            end
+        end)
+    end
 end)
 
-toggleCircle.MouseButton1Click:Connect(function()
-	mainFrame.Visible = true
-	toggleCircle.Visible = false
+-- 5. ПОДСВЕТКА СУНДУКОВ (Gold/Diamond Chest ESP)
+CreateUltimateToggle("📦 ПОДСВЕТКА СУНДУКОВ (CHEST ESP)", 190, function(state)
+    _G.FullHubSettings.EspChests = state
+    if not state then
+        for _, v in pairs(workspace:GetChildren()) do
+            if v:FindFirstChild("SelectionBox") then v.SelectionBox:Destroy() end
+        end
+    end
 end)
 
---// Перетаскивание основного окна
-makeDraggable(mainFrame, topBar)
+-- ===========================================================================
+-- МЕТАТАБЛИЧНЫЙ ОБХОД ЗАЩИТЫ НА СКОРОСТЬ В БФ
+-- ===========================================================================
+local mt = getrawmetatable(game)
+local oldIndex = mt.__index
+local oldNewIndex = mt.__newindex
+setreadonly(mt, false)
 
---// Перетаскивание круглой кнопки (мобильная поддержка)
-makeDraggable(toggleCircle, toggleCircle)
+mt.__newindex = newcclosure(function(self, key, value)
+    if key == "WalkSpeed" and _G.FullHubSettings.SpeedBypass then
+        if value == _G.HubSettings.DefaultSpeed or value < _G.HubSettings.WalkSpeed then
+            value = _G.FullHubSettings.WalkSpeed
+        end
+    end
+    return oldNewIndex(self, key, value)
+end)
 
---// Инициализация первой вкладки
-switchTab("Управление")
+mt.__index = newcclosure(function(self, key)
+    if key == "WalkSpeed" and _G.FullHubSettings.SpeedBypass then
+        return _G.FullHubSettings.WalkSpeed
+    end
+    return oldIndex(self, key)
+end)
